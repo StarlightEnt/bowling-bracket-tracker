@@ -37,12 +37,33 @@ export default function AdminChipDraw() {
     setSelectedPos(null);
     setSelectedBowler("");
     setMsg(null);
+    setAutoMsg(null);
     fetchEntries(bracket.id);
+  };
+
+  const handleAutoDraw = async () => {
+    if (!selectedBracket) return;
+    if (!confirm(`Randomly assign all available bowlers to open slots in ${selectedBracket.name}?`)) return;
+    setAutoLoading(true);
+    setAutoMsg(null);
+    const res = await fetch("/api/admin/auto-draw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bracket_id: selectedBracket.id }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setAutoMsg({ type: "success", text: `Assigned ${data.assigned} bowlers randomly!` });
+      fetchEntries(selectedBracket.id);
+    } else {
+      setAutoMsg({ type: "error", text: data.error });
+    }
+    setAutoLoading(false);
   };
 
   const handleSlotClick = (pos) => {
     const taken = entries.find((e) => e.position === pos);
-    if (taken) return; // don't allow clicking taken slots
+    if (taken) return;
     setSelectedPos(pos);
     setSelectedBowler("");
     setMsg(null);
@@ -77,13 +98,21 @@ export default function AdminChipDraw() {
     fetchEntries(selectedBracket.id);
   };
 
+  const handleClearAll = async () => {
+    if (!confirm(`Remove ALL entries from ${selectedBracket.name}? This cannot be undone.`)) return;
+    for (const entry of entries) {
+      await fetch(`/api/admin/entries?id=${entry.id}`, { method: "DELETE" });
+    }
+    fetchEntries(selectedBracket.id);
+    setAutoMsg(null);
+  };
+
   const entryByPos = {};
   entries.forEach((e) => { entryByPos[e.position] = e; });
 
   const range = QUADRANT_RANGES[selectedQuadrant];
   const slots = [];
   for (let p = range.start; p <= range.end; p++) slots.push(p);
-
   const openSlots = slots.filter((p) => !entryByPos[p]);
 
   return (
@@ -102,29 +131,54 @@ export default function AdminChipDraw() {
               onClick={() => handleBracketSelect(b)}
             >
               {b.name}
-              <span className={`badge badge-${b.bracket_type}`} style={{ marginLeft: "0.4rem" }}>{b.bracket_type === "scratch" ? "S" : "H"}</span>
+              <span className={`badge badge-${b.bracket_type}`} style={{ marginLeft: "0.4rem" }}>
+                {b.bracket_type === "scratch" ? "S" : "H"}
+              </span>
             </button>
           ))}
         </div>
-        {brackets.length === 0 && <p style={{ color: "var(--color-text-muted)", marginTop: "0.5rem" }}>No brackets yet. Create brackets first.</p>}
+        {brackets.length === 0 && (
+          <p style={{ color: "var(--color-text-muted)", marginTop: "0.5rem" }}>
+            No brackets yet. Create brackets first.
+          </p>
+        )}
       </div>
 
       {selectedBracket && (
         <>
-          {/* Auto draw button */}
-          <div className="card" style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)" }}>
+          {/* Auto-fill card */}
+          <div className="card" style={{ background: "var(--color-surface-2)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
               <div>
-                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem", color: "var(--color-amber)" }}>🎱 Auto-Fill Chip Draw</div>
-                <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.2rem" }}>Randomly assigns all available bowlers to open slots in {selectedBracket.name}</div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem", color: "var(--color-amber)" }}>
+                  🎱 Auto-Fill Chip Draw
+                </div>
+                <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.2rem" }}>
+                  Randomly assigns all available bowlers to open slots in {selectedBracket.name}
+                </div>
               </div>
-              <button className="btn btn-primary" onClick={handleAutoDraw} disabled={autoLoading || entries.length >= 64}>
-                {autoLoading ? "Assigning..." : entries.length >= 64 ? "Bracket Full" : "Auto-Fill All Slots"}
-              </button>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {entries.length > 0 && (
+                  <button className="btn btn-danger" onClick={handleClearAll}>
+                    Clear All
+                  </button>
+                )}
+                <button
+                  className="btn btn-primary"
+                  onClick={handleAutoDraw}
+                  disabled={autoLoading || entries.length >= 64}
+                >
+                  {autoLoading ? "Assigning..." : entries.length >= 64 ? "Bracket Full" : "Auto-Fill All Slots"}
+                </button>
+              </div>
             </div>
-            {autoMsg && <div className={`alert alert-${autoMsg.type}`} style={{ marginTop: "0.75rem" }}>{autoMsg.text}</div>}
+            {autoMsg && (
+              <div className={`alert alert-${autoMsg.type}`} style={{ marginTop: "0.75rem" }}>
+                {autoMsg.text}
+              </div>
+            )}
           </div>
-        <>
+
           {/* Step 2: Select quadrant */}
           <div className="card">
             <div className="card-title">Step 2 — Select Quadrant</div>
@@ -145,7 +199,7 @@ export default function AdminChipDraw() {
             </div>
           </div>
 
-          {/* Step 3: Click a slot */}
+          {/* Step 3: Slot grid */}
           <div className="card">
             <div className="card-title">
               Step 3 — {selectedBracket.name} · {QUADRANT_RANGES[selectedQuadrant].label}
@@ -158,14 +212,11 @@ export default function AdminChipDraw() {
                 const entry = entryByPos[pos];
                 const isTaken = Boolean(entry);
                 const isSelected = selectedPos === pos;
-                const typeClass = isTaken
-                  ? `taken taken-${selectedBracket.bracket_type}`
-                  : isSelected ? "open" : "open";
 
                 return (
                   <div
                     key={pos}
-                    className={`chip-slot ${typeClass} ${isSelected ? "btn-primary" : ""}`}
+                    className={`chip-slot ${isTaken ? "taken" : "open"}`}
                     onClick={() => !isTaken && handleSlotClick(pos)}
                     style={isSelected ? { borderColor: "var(--color-amber)", background: "rgba(245,158,11,0.15)", color: "var(--color-amber)" } : {}}
                   >
@@ -202,11 +253,7 @@ export default function AdminChipDraw() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleAssign}
-                    disabled={!selectedBowler}
-                  >
+                  <button className="btn btn-primary" onClick={handleAssign} disabled={!selectedBowler}>
                     Assign
                   </button>
                   <button className="btn btn-outline" onClick={() => { setSelectedPos(null); setSelectedBowler(""); }}>
@@ -218,10 +265,12 @@ export default function AdminChipDraw() {
             )}
           </div>
 
-          {/* Current entries for this bracket */}
+          {/* Current entries table */}
           {entries.length > 0 && (
             <div className="card">
-              <div className="card-title">Current Assignments — {selectedBracket.name} ({entries.length} / 64)</div>
+              <div className="card-title">
+                Current Assignments — {selectedBracket.name} ({entries.length} / 64)
+              </div>
               <table className="data-table">
                 <thead>
                   <tr><th>Pos</th><th>Quadrant</th><th>Bowler</th><th>Avg</th><th>Handicap</th><th></th></tr>
