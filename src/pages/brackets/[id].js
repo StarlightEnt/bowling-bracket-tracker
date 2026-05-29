@@ -108,4 +108,89 @@ export default function BracketDetailPage() {
         <p style={{ color: "var(--color-text-muted)", marginTop: "0.25rem", fontSize: "0.85rem" }}>
           {entries.length} / 64 entries
           {isHandicap && " · Scores include handicap"}
-          {lastUpdate &
+          {lastUpdate && ` · Updated ${lastUpdate.toLocaleTimeString()}`}
+        </p>
+      </div>
+
+      {entries.length === 0 && (
+        <div className="card">
+          <p style={{ color: "var(--color-text-muted)", textAlign: "center", padding: "2rem 0" }}>
+            No entries yet. Check back once the chip draw is complete!
+          </p>
+        </div>
+      )}
+
+      {rounds.length > 0 && (
+        <div style={{ overflowX: "auto", paddingBottom: "1rem" }}>
+          <div className="bracket-grid" style={{ gridTemplateColumns: `repeat(${rounds.length}, minmax(160px, 1fr))` }}>
+            {rounds.map(({ game, groups }) => {
+              const priorAlive = aliveByRound[game - 1];
+              const winnerPositions_byKey = matchupMap[game] || {};
+
+              return (
+                <div key={game} className="bracket-round">
+                  <div className="round-label">{ROUND_LABELS[game - 1]}</div>
+                  {groups.map((positions) => {
+                    const alivePositions = priorAlive
+                      ? positions.filter((p) => priorAlive.has(p))
+                      : positions;
+                    if (alivePositions.length === 0) return null;
+
+                    const posKey = alivePositions.slice().sort((a, b) => a - b).join(",");
+                    const winners = winnerPositions_byKey[posKey] || [];
+
+                    return (
+                      <div key={positions.join("-")} className="bracket-matchup">
+                        {alivePositions.map((pos) => {
+                          const entry = entryByPos[pos];
+                          const isWinner = winners.includes(pos);
+                          const isEliminated = winners.length > 0 && !isWinner;
+                          const score = entry?.effectiveByGame?.[game];
+
+                          let cls = "bracket-entry";
+                          if (isWinner) cls += " winner";
+                          else if (isEliminated) cls += " eliminated";
+
+                          return (
+                            <div key={pos} className={cls}>
+                              <span className="entry-pos">{pos}</span>
+                              <span className="entry-name">
+                                {entry ? entry.bowler_name : <em>Empty</em>}
+                              </span>
+                              <span className="entry-score">
+                                {score !== undefined && score !== null ? score : "—"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {aliveByRound[6]?.size === 1 && (
+        <div style={{
+          marginTop: "2rem",
+          textAlign: "center",
+          padding: "2rem",
+          background: "var(--color-surface)",
+          borderRadius: "var(--radius-lg)",
+          border: "2px solid var(--color-amber)"
+        }}>
+          <div style={{ fontSize: "2rem" }}>🏆</div>
+          <div style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800, color: "var(--color-amber)", marginTop: "0.5rem" }}>
+            Champion
+          </div>
+          <div style={{ fontSize: "1.3rem", marginTop: "0.25rem" }}>
+            {entryByPos[[...aliveByRound[6]][0]]?.bowler_name}
+          </div>
+        </div>
+      )}
+    </Layout>
+  );
+}
