@@ -50,7 +50,9 @@ export default function AdminBowlers() {
     setImportResult(null);
     const fd = new FormData();
     fd.append("file", file);
-    const res = await fetch("/api/admin/import-roster", { method: "POST", body: fd });
+    const isXml = file.name.toLowerCase().endsWith(".xml");
+    const url = isXml ? "/api/admin/import-igbo" : "/api/admin/import-roster";
+    const res = await fetch(url, { method: "POST", body: fd });
     const data = await res.json();
     setImportResult(data);
     fetchBowlers();
@@ -67,13 +69,13 @@ export default function AdminBowlers() {
         <div className="card">
           <div className="card-title">📂 Import from CSV</div>
           <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "1rem" }}>
-            CSV must have a name column and an average column. Extra columns are ignored.
+            Accepts IGBO-TS XML exports (.xml) or CSV files (.csv) with name and average columns. IGBO XML imports use BOOK_AVERAGE as the entering average.
             Existing bowlers are updated if re-imported.
           </p>
           <form onSubmit={handleImport}>
             <div className="form-group">
               <label>CSV File</label>
-              <input type="file" accept=".csv" ref={fileRef} />
+              <input type="file" accept=".csv,.xml" ref={fileRef} />
             </div>
             <button type="submit" className="btn btn-primary">Import Roster</button>
           </form>
