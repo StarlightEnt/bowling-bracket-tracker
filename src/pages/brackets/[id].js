@@ -3,9 +3,19 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 
 const TOTAL_ROUNDS = 6;
-const ROUND_LABELS = ["Gm1", "Gm2", "Gm3", "Gm4", "Gm5", "Gm6"];
+const ROUND_LABELS = ["Gm 1", "Gm 2", "Gm 3", "Gm 4", "Gm 5", "Gm 6"];
 
-export default function BracketDisplayPage() {
+// Layout constants — tuned for 16:9 display
+const SLOT_H = 18;        // height of one name slot
+const SLOT_GAP = 2;       // gap between slots in a matchup
+const LINE_W = 14;        // width of connector stub lines
+const COL_W = 200;        // width of each round column (wider for hdcp scores)
+const COL_GAP = 20;       // gap between columns
+const MARGIN_TOP = 48;    // top margin (below header)
+const MARGIN_LEFT = 8;
+const BRACKET_H = 800;    // usable bracket height
+
+export default function BracketPage() {
   const router = useRouter();
   const { id } = router.query;
   const [data, setData] = useState(null);
@@ -29,20 +39,13 @@ export default function BracketDisplayPage() {
     return () => clearInterval(interval);
   }, [fetchData]);
 
-  if (loading) return (
-    <div style={{ background: "#0d0f12", color: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif" }}>
-      Loading bracket...
-    </div>
-  );
-
-  if (!data) return (
-    <div style={{ background: "#0d0f12", color: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "sans-serif" }}>
-      Bracket not found.
-    </div>
-  );
+  if (loading) return <Screen><p style={{ color: "#94a3b8" }}>Loading bracket...</p></Screen>;
+  if (!data) return <Screen><p style={{ color: "#ef4444" }}>Bracket not found.</p></Screen>;
 
   const { bracket, entries, matchups } = data;
+  const isHdcp = bracket.bracket_type === "handicap";
 
+  // Build lookups
   const entryByPos = {};
   for (const e of entries) entryByPos[e.position] = e;
 
@@ -53,332 +56,514 @@ export default function BracketDisplayPage() {
     if (m.winner_position) matchupMap[m.game_number][m.positions].push(m.winner_position);
   }
 
-  // Alive positions after each round — only set if winners actually exist
-  const aliveByRound = {};
-  aliveByRound[0] = new Set(entries.map(e => e.position));
+  // Alive positions after each game
+  const aliveAfter = {};
+  aliveAfter[0] = new Set(entries.map(e => e.position));
   for (let g = 1; g <= TOTAL_ROUNDS; g++) {
     const rm = matchupMap[g] || {};
     const w = new Set();
-    for (const wp of Object.values(rm)) for (const p of wp) w.add(p);
-    aliveByRound[g] = w.size > 0 ? w : null;
+    for (const wps of Object.values(rm)) for (const p of wps) w.add(p);
+    aliveAfter[g] = w.size > 0 ? w : null;
   }
 
-  const isHandicap = bracket.bracket_type === "handicap";
-
-  // Get raw score and handicap for display
-  const getScoreDisplay = (pos, game) => {
-    const entry = entryByPos[pos];
-    if (!entry) return null;
-    const raw = entry.rawByGame?.[game];
-    if (raw === undefined || raw === null) return null;
-    if (isHandicap) {
-      const hdcp = entry.handicap || 0;
-      const total = raw + hdcp;
-      return { raw, hdcp, total, display: `${raw}+${hdcp}=${total}` };
+  // Score display for a position in a game
+  const scoreStr = (pos, game) => {
+    const e = entryByPos[pos];
+    if (!e) return "";
+    const raw = e.rawByGame?.[game];
+    if (raw == null) return "";
+    if (isHdcp) {
+      const h = e.handicap || 0;
+      return `${raw}+${h}=${raw + h}`;
     }
-    return { raw, display: String(raw) };
+    return String(raw);
   };
 
-  // Get winner positions for a matchup group in a given game
-  // Only returns winners if scores have actually been entered
-  const getWinners = (positions, game) => {
-    const priorAlive = aliveByRound[game - 1];
-    const alive = priorAlive ? positions.filter(p => priorAlive.has(p)) : positions;
-    if (alive.length === 0) return { alive: [], winners: [] };
+  // Winners for a matchup group in a game
+  const winnersOf = (alive, game) => {
+    if (!alive || alive.length === 0) return [];
     const key = alive.slice().sort((a, b) => a - b).join(",");
-    const winners = matchupMap[game]?.[key] || [];
-    return { alive, winners };
+    return matchupMap[game]?.[key] || [];
   };
 
-  // Build position groups for a half-bracket and round
-  const buildGroups = (halfPositions, game) => {
-    const groupSize = Math.pow(2, game);
-    const sorted = halfPositions.slice().sort((a, b) => a - b);
-    const groups = [];
-    for (let i = 0; i < sorted.length; i += groupSize) {
-      groups.push(sorted.slice(i, i + groupSize));
+  // Build half-bracket data: positions 1-32 (left) or 33-64 (right)
+  // Returns array of rounds, each round is array of matchup groups
+  // Each group is array of slot objects: { pos, name, score, status }
+  const buildHalf = (startPos) => {
+    const half = Array.from({ length: 32 }, (_, i) => i + startPos);
+    const rounds = [];
+
+    for (let game = 1; game <= 5; game++) {
+      const groupSize = Math.pow(2, game);
+      const groups = [];
+
+      for (let i = 0; i < 32; i += groupSize) {
+        const positions = half.slice(i, i + groupSize);
+
+        if (game === 1) {
+          // Game 1: show all positions as pairs
+          for (let j = 0; j < positions.length; j += 2) {
+            const pair = positions.slice(j, j + 2);
+            const winners = winnersOf(pair, 1);
+            groups.push(pair.map(pos => ({
+              pos,
+              name: entryByPos[pos]?.bowler_name || "",
+              score: scoreStr(pos, 1),
+              status: winners.length > 0
+                ? (winners.includes(pos) ? "winner" : "lost")
+                : "pending"
+            })));
+          }
+        } else {
+          // Game N: only show winners from prior round
+          const priorAlive = aliveAfter[game - 1];
+          const alive = priorAlive ? positions.filter(p => priorAlive.has(p)) : [];
+          const winners = winnersOf(alive, game);
+          if (alive.length > 0) {
+            groups.push(alive.map(pos => ({
+              pos,
+              name: entryByPos[pos]?.bowler_name || "",
+              score: scoreStr(pos, game),
+              status: winners.length > 0
+                ? (winners.includes(pos) ? "winner" : "lost")
+                : "pending"
+            })));
+          } else {
+            // Placeholder empty group to maintain tree structure
+            groups.push([{ pos: null, name: "", score: "", status: "empty" }]);
+          }
+        }
+      }
+      rounds.push(groups);
     }
-    return groups;
+    return rounds;
   };
 
-  // Only show rounds that have actual resolved winners
-  // Game 1 always shows. Game N only shows if game N-1 has winners.
-  const maxVisibleGame = (() => {
-    if (entries.length === 0) return 0;
-    let max = 1;
-    for (let g = 2; g <= TOTAL_ROUNDS; g++) {
-      if (aliveByRound[g - 1] && aliveByRound[g - 1].size > 0) max = g;
-    }
-    return max;
-  })();
+  const leftRounds = buildHalf(1);
+  const rightRounds = buildHalf(33);
 
-  const leftPositions = Array.from({ length: 32 }, (_, i) => i + 1);
-  const rightPositions = Array.from({ length: 32 }, (_, i) => i + 33);
-  const isHandicapBracket = bracket.bracket_type === "handicap";
-  const champion = aliveByRound[6]?.size === 1 ? [...aliveByRound[6]][0] : null;
+  // Finals (game 6)
+  const leftFinalist = aliveAfter[5] ? [...aliveAfter[5]].filter(p => p <= 32) : [];
+  const rightFinalist = aliveAfter[5] ? [...aliveAfter[5]].filter(p => p >= 33) : [];
+  const allFinalists = [...leftFinalist, ...rightFinalist];
+  const finalWinners = winnersOf(allFinalists, 6);
+  const champion = aliveAfter[6]?.size === 1 ? [...aliveAfter[6]][0] : null;
 
-  // How many columns to show on each side (max 5, center is game 6)
-  const visibleSideGames = Math.min(maxVisibleGame, 5);
-  const showFinal = maxVisibleGame >= 6;
+  // Total SVG width: left half + center + right half
+  const halfW = 5 * (COL_W + COL_GAP);
+  const centerW = isHdcp ? 220 : 170;
+  const totalW = halfW * 2 + centerW + MARGIN_LEFT * 2;
 
   return (
     <>
-      <Head>
-        <title>{bracket.name} — Bracket Tracker</title>
-      </Head>
+      <Head><title>{bracket.name} — Bracket Tracker</title></Head>
       <div style={{
-        background: "#0d0f12",
-        color: "#e2e8f0",
+        background: "#0a0c0f",
         width: "100vw",
         height: "100vh",
         overflow: "hidden",
         display: "flex",
         flexDirection: "column",
-        fontFamily: "'Barlow Condensed', 'Arial Narrow', sans-serif",
+        fontFamily: "'Barlow Condensed', 'Arial Narrow', Arial, sans-serif",
+        color: "#e2e8f0",
       }}>
-        {/* Header */}
+        {/* Header bar */}
         <div style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0.4rem 1.2rem",
-          background: "#161a20",
-          borderBottom: "2px solid #f59e0b",
+          padding: "0 1rem",
+          height: "40px",
           flexShrink: 0,
+          background: "#111418",
+          borderBottom: "2px solid #f59e0b",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-            <span style={{ fontSize: "1.6rem", fontWeight: 800, letterSpacing: "0.05em", color: "#f59e0b", textTransform: "uppercase" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <span style={{ fontSize: "1.4rem", fontWeight: 800, color: "#f59e0b", letterSpacing: "0.04em", textTransform: "uppercase" }}>
               🎳 {bracket.name}
             </span>
-            <span style={{
-              fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-              padding: "0.2rem 0.5rem", borderRadius: "4px",
-              background: isHandicapBracket ? "rgba(16,185,129,0.2)" : "rgba(59,130,246,0.2)",
-              color: isHandicapBracket ? "#10b981" : "#3b82f6"
-            }}>
-              {bracket.bracket_type}
-            </span>
-            {bracket.status === "active" && (
-              <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#10b981" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "pulse 1.5s infinite" }} />
-                LIVE
-              </span>
-            )}
+            <Tag color={isHdcp ? "#10b981" : "#3b82f6"}>{bracket.bracket_type}</Tag>
+            {bracket.status === "active" && <LiveDot />}
           </div>
-          <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-            {entries.length}/64 entries{isHandicapBracket ? " · Handicap: raw+hdcp=total" : ""}{lastUpdate ? ` · Updated ${lastUpdate.toLocaleTimeString()}` : ""}
+          <div style={{ fontSize: "0.65rem", color: "#475569", letterSpacing: "0.05em" }}>
+            {entries.length}/64 entries
+            {isHdcp ? "  ·  scores shown as raw+hdcp=total" : ""}
+            {lastUpdate ? `  ·  updated ${lastUpdate.toLocaleTimeString()}` : ""}
           </div>
         </div>
 
-        {/* Bracket area */}
-        <div style={{ flex: 1, display: "flex", overflow: "hidden", padding: "0.3rem 0.5rem", gap: "0.3rem" }}>
-
-          {/* LEFT HALF — positions 1-32 */}
-          <div style={{ flex: 1, display: "flex", gap: "2px", overflow: "hidden" }}>
-            {Array.from({ length: visibleSideGames }, (_, i) => i + 1).map(game => (
-              <BracketColumn
-                key={game}
-                game={game}
-                positions={leftPositions}
-                entryByPos={entryByPos}
-                aliveByRound={aliveByRound}
-                getWinners={getWinners}
-                buildGroups={buildGroups}
-                getScoreDisplay={getScoreDisplay}
-                label={ROUND_LABELS[game - 1]}
-                side="left"
-                isHandicap={isHandicapBracket}
-              />
+        {/* Bracket canvas */}
+        <div style={{ flex: 1, overflow: "auto", padding: "8px" }}>
+          <svg
+            width="100%"
+            viewBox={`0 0 ${totalW} ${BRACKET_H + MARGIN_TOP + 20}`}
+            style={{ display: "block" }}
+          >
+            {/* Round labels — left half */}
+            {[0,1,2,3,4].map(i => (
+              <text key={i}
+                x={MARGIN_LEFT + i * (COL_W + COL_GAP) + COL_W / 2}
+                y={MARGIN_TOP - 8}
+                textAnchor="middle"
+                fontSize="11"
+                fill="#64748b"
+                fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+                fontWeight="700"
+                letterSpacing="1"
+              >
+                {ROUND_LABELS[i].toUpperCase()}
+              </text>
             ))}
-          </div>
 
-          {/* CENTER — Game 6 Final */}
-          <div style={{ width: isHandicapBracket ? "200px" : "150px", flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
-            <div style={{ fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#64748b", marginBottom: "0.25rem" }}>
-              {ROUND_LABELS[5]} — Final
-            </div>
-
-            {showFinal ? (
-              <>
-                <ChampionSlot side="left" positions={leftPositions} aliveByRound={aliveByRound} matchupMap={matchupMap} entryByPos={entryByPos} getScoreDisplay={getScoreDisplay} champion={champion} isHandicap={isHandicapBracket} />
-                <div style={{ textAlign: "center", padding: "0.3rem 0" }}>
-                  {champion ? (
-                    <div>
-                      <div style={{ fontSize: "1.5rem" }}>🏆</div>
-                      <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#f59e0b" }}>Champion</div>
-                      <div style={{ fontSize: "0.8rem", fontWeight: 600, color: "#f59e0b", marginTop: "0.15rem" }}>{entryByPos[champion]?.bowler_name}</div>
-                    </div>
-                  ) : (
-                    <div style={{ fontSize: "1.2rem", opacity: 0.3 }}>🏆</div>
-                  )}
-                </div>
-                <ChampionSlot side="right" positions={rightPositions} aliveByRound={aliveByRound} matchupMap={matchupMap} entryByPos={entryByPos} getScoreDisplay={getScoreDisplay} champion={champion} isHandicap={isHandicapBracket} />
-              </>
-            ) : (
-              <div style={{ textAlign: "center", opacity: 0.2 }}>
-                <div style={{ fontSize: "1.5rem" }}>🏆</div>
-                <div style={{ fontSize: "0.6rem", color: "#64748b", marginTop: "0.25rem" }}>Awaiting finalists</div>
-              </div>
-            )}
-          </div>
-
-          {/* RIGHT HALF — positions 33-64, mirrored */}
-          <div style={{ flex: 1, display: "flex", gap: "2px", overflow: "hidden", flexDirection: "row-reverse" }}>
-            {Array.from({ length: visibleSideGames }, (_, i) => i + 1).map(game => (
-              <BracketColumn
-                key={game}
-                game={game}
-                positions={rightPositions}
-                entryByPos={entryByPos}
-                aliveByRound={aliveByRound}
-                getWinners={getWinners}
-                buildGroups={buildGroups}
-                getScoreDisplay={getScoreDisplay}
-                label={ROUND_LABELS[game - 1]}
-                side="right"
-                isHandicap={isHandicapBracket}
-              />
+            {/* Round labels — right half */}
+            {[0,1,2,3,4].map(i => (
+              <text key={i}
+                x={MARGIN_LEFT + halfW + centerW + COL_GAP + i * (COL_W + COL_GAP) + COL_W / 2}
+                y={MARGIN_TOP - 8}
+                textAnchor="middle"
+                fontSize="11"
+                fill="#64748b"
+                fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+                fontWeight="700"
+                letterSpacing="1"
+              >
+                {ROUND_LABELS[i].toUpperCase()}
+              </text>
             ))}
-          </div>
+
+            {/* Final label */}
+            <text
+              x={MARGIN_LEFT + halfW + centerW / 2}
+              y={MARGIN_TOP - 8}
+              textAnchor="middle"
+              fontSize="11"
+              fill="#f59e0b"
+              fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+              fontWeight="700"
+              letterSpacing="1"
+            >
+              {ROUND_LABELS[5].toUpperCase()} — FINAL
+            </text>
+
+            {/* Left half bracket */}
+            <HalfBracket
+              rounds={leftRounds}
+              side="left"
+              xOffset={MARGIN_LEFT}
+              isHdcp={isHdcp}
+            />
+
+            {/* Right half bracket */}
+            <HalfBracket
+              rounds={rightRounds}
+              side="right"
+              xOffset={MARGIN_LEFT + halfW + centerW + COL_GAP}
+              isHdcp={isHdcp}
+            />
+
+            {/* Finals column */}
+            <Finals
+              leftFinalists={leftFinalist}
+              rightFinalists={rightFinalist}
+              entryByPos={entryByPos}
+              finalWinners={finalWinners}
+              champion={champion}
+              xCenter={MARGIN_LEFT + halfW + centerW / 2}
+              isHdcp={isHdcp}
+              scoreStr={scoreStr}
+            />
+          </svg>
         </div>
 
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&display=swap');
-          @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.75)} }
+          @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
         `}</style>
       </div>
     </>
   );
 }
 
-function BracketColumn({ game, positions, entryByPos, aliveByRound, getWinners, buildGroups, getScoreDisplay, label, side, isHandicap }) {
-  const groups = buildGroups(positions, game);
+// Renders one half of the bracket (left or right)
+function HalfBracket({ rounds, side, xOffset, isHdcp }) {
+  const isRight = side === "right";
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
-      <div style={{ fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#64748b", textAlign: "center", paddingBottom: "0.2rem", borderBottom: "1px solid #2a313d", marginBottom: "0.2rem" }}>
-        {label}
-      </div>
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "2px", justifyContent: "space-around" }}>
-        {groups.map((groupPositions, gi) => {
-          const { alive, winners } = getWinners(groupPositions, game);
+    <g>
+      {rounds.map((groups, roundIdx) => {
+        const game = roundIdx + 1;
+        const colX = isRight
+          ? xOffset + (4 - roundIdx) * (COL_W + COL_GAP)
+          : xOffset + roundIdx * (COL_W + COL_GAP);
 
-          // For game 1: show all positions in the bracket
-          // For game N: only show the winners from the prior round
-          const displayPositions = game === 1 ? groupPositions : alive;
-          if (displayPositions.length === 0) return <div key={gi} style={{ flex: 1 }} />;
+        // Number of slots in game 1 = 32 bowlers = 16 pairs
+        // Each subsequent round halves
+        const slotsPerGroup = Math.pow(2, game);
+        const totalSlots = 32;
+        const slotH = BRACKET_H / totalSlots;
+
+        // For game 1: 16 groups of 2
+        // For game 2: 8 groups of 2 (only winners)
+        // etc.
+        const numGroups = game === 1 ? 16 : Math.pow(2, 5 - game + 1) / 2;
+
+        return groups.map((group, gi) => {
+          if (!group || group.length === 0) return null;
+
+          // Y position: each group spans slotsPerGroup * slotH height
+          const groupH = slotsPerGroup * slotH;
+          const groupY = MARGIN_TOP + gi * groupH;
+          const centerY = groupY + groupH / 2;
+
+          // For game 1 groups are pairs; for later games show the alive group
+          const slotCount = group.length;
+          const totalGroupH = slotCount * (SLOT_H + SLOT_GAP) - SLOT_GAP;
+          const startY = centerY - totalGroupH / 2;
 
           return (
-            <MatchupGroup
-              key={gi}
-              positions={displayPositions}
-              game={game}
-              entryByPos={entryByPos}
-              winners={winners}
-              getScoreDisplay={getScoreDisplay}
-              side={side}
-              isHandicap={isHandicap}
-            />
+            <g key={`r${roundIdx}-g${gi}`}>
+              {group.map((slot, si) => {
+                if (!slot) return null;
+                const slotY = startY + si * (SLOT_H + SLOT_GAP);
+                const midY = slotY + SLOT_H / 2;
+
+                // Connector line stub
+                const lineX1 = isRight ? colX + COL_W : colX;
+                const lineX2 = isRight ? colX + COL_W + LINE_W : colX - LINE_W;
+
+                return (
+                  <g key={si}>
+                    {/* Connector stub */}
+                    {slot.status !== "empty" && (
+                      <line
+                        x1={lineX1}
+                        y1={midY}
+                        x2={lineX2}
+                        y2={midY}
+                        stroke={slot.status === "winner" ? "#f59e0b" : "#2a313d"}
+                        strokeWidth="1"
+                      />
+                    )}
+
+                    {/* Slot background */}
+                    {slot.status !== "empty" && (
+                      <rect
+                        x={colX}
+                        y={slotY}
+                        width={COL_W}
+                        height={SLOT_H}
+                        fill={slot.status === "winner" ? "rgba(245,158,11,0.12)" : "rgba(22,26,32,0.9)"}
+                        stroke={slot.status === "winner" ? "#f59e0b" : "#1e2530"}
+                        strokeWidth="0.5"
+                        rx="2"
+                      />
+                    )}
+
+                    {/* Empty slot line (unfilled bracket position) */}
+                    {slot.status === "empty" && (
+                      <line
+                        x1={colX}
+                        y1={slotY + SLOT_H / 2}
+                        x2={colX + COL_W}
+                        y2={slotY + SLOT_H / 2}
+                        stroke="#1e2530"
+                        strokeWidth="0.75"
+                      />
+                    )}
+
+                    {/* Position number */}
+                    {slot.pos && (
+                      <text
+                        x={colX + 4}
+                        y={slotY + SLOT_H / 2}
+                        dominantBaseline="central"
+                        fontSize="9"
+                        fill="#475569"
+                        fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+                        fontWeight="600"
+                      >
+                        {slot.pos}
+                      </text>
+                    )}
+
+                    {/* Name */}
+                    {slot.name && (
+                      <text
+                        x={colX + 18}
+                        y={slotY + SLOT_H / 2}
+                        dominantBaseline="central"
+                        fontSize="10"
+                        fill={slot.status === "winner" ? "#f59e0b" : slot.status === "lost" ? "#374151" : "#cbd5e1"}
+                        fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+                        fontWeight={slot.status === "winner" ? "700" : "400"}
+                        textDecoration={slot.status === "lost" ? "line-through" : "none"}
+                      >
+                        {slot.name.length > 18 ? slot.name.slice(0, 17) + "…" : slot.name}
+                      </text>
+                    )}
+
+                    {/* Score */}
+                    {slot.score && (
+                      <text
+                        x={colX + COL_W - 4}
+                        y={slotY + SLOT_H / 2}
+                        textAnchor="end"
+                        dominantBaseline="central"
+                        fontSize="9"
+                        fill={slot.status === "winner" ? "#f59e0b" : "#64748b"}
+                        fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+                        fontWeight="700"
+                      >
+                        {slot.score}
+                      </text>
+                    )}
+                  </g>
+                );
+              })}
+
+              {/* Vertical connector line between slots in a group (game > 1) */}
+              {game > 1 && group.length > 1 && group[0].status !== "empty" && (
+                <line
+                  x1={isRight ? colX + COL_W + LINE_W : colX - LINE_W}
+                  y1={startY + SLOT_H / 2}
+                  x2={isRight ? colX + COL_W + LINE_W : colX - LINE_W}
+                  y2={startY + (group.length - 1) * (SLOT_H + SLOT_GAP) + SLOT_H / 2}
+                  stroke="#2a313d"
+                  strokeWidth="1"
+                />
+              )}
+
+              {/* Game 1 vertical bracket line between pairs */}
+              {game === 1 && group.length === 2 && (
+                <>
+                  <line
+                    x1={isRight ? colX + COL_W + LINE_W : colX - LINE_W}
+                    y1={startY + SLOT_H / 2}
+                    x2={isRight ? colX + COL_W + LINE_W : colX - LINE_W}
+                    y2={startY + SLOT_H + SLOT_GAP + SLOT_H / 2}
+                    stroke="#2a313d"
+                    strokeWidth="1"
+                  />
+                  {/* Horizontal connector to next round */}
+                  <line
+                    x1={isRight ? colX + COL_W + LINE_W : colX - LINE_W}
+                    y1={centerY}
+                    x2={isRight ? colX + COL_W + LINE_W + COL_GAP + 0 : colX - LINE_W - COL_GAP}
+                    y2={centerY}
+                    stroke="#2a313d"
+                    strokeWidth="1"
+                  />
+                </>
+              )}
+            </g>
           );
-        })}
-      </div>
+        });
+      })}
+    </g>
+  );
+}
+
+// Finals/championship column in the center
+function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, isHdcp, scoreStr }) {
+  const slotW = isHdcp ? 200 : 155;
+  const slotX = xCenter - slotW / 2;
+  const midY = MARGIN_TOP + BRACKET_H / 2;
+
+  const renderFinalist = (pos, yPos) => {
+    const entry = entryByPos[pos];
+    const isWinner = finalWinners.includes(pos) || champion === pos;
+    const isLost = (finalWinners.length > 0 || champion) && !isWinner;
+    const score = scoreStr(pos, 6);
+
+    return (
+      <g key={pos}>
+        <rect
+          x={slotX} y={yPos}
+          width={slotW} height={SLOT_H}
+          fill={isWinner ? "rgba(245,158,11,0.15)" : "rgba(22,26,32,0.9)"}
+          stroke={isWinner ? "#f59e0b" : "#2a313d"}
+          strokeWidth={isWinner ? "1" : "0.5"}
+          rx="2"
+        />
+        <text x={slotX + 4} y={yPos + SLOT_H / 2} dominantBaseline="central" fontSize="9" fill="#475569" fontFamily="'Barlow Condensed', Arial Narrow, Arial" fontWeight="600">
+          {pos}
+        </text>
+        <text
+          x={slotX + 18} y={yPos + SLOT_H / 2}
+          dominantBaseline="central" fontSize="10"
+          fill={isWinner ? "#f59e0b" : isLost ? "#374151" : "#cbd5e1"}
+          fontFamily="'Barlow Condensed', Arial Narrow, Arial"
+          fontWeight={isWinner ? "700" : "400"}
+          textDecoration={isLost ? "line-through" : "none"}
+        >
+          {entry?.bowler_name?.slice(0, 18) || "—"}
+        </text>
+        {score && (
+          <text x={slotX + slotW - 4} y={yPos + SLOT_H / 2} textAnchor="end" dominantBaseline="central" fontSize="9" fill={isWinner ? "#f59e0b" : "#64748b"} fontFamily="'Barlow Condensed', Arial Narrow, Arial" fontWeight="700">
+            {score}
+          </text>
+        )}
+      </g>
+    );
+  };
+
+  // Position finalists above and below center trophy
+  const trophyH = champion ? 60 : 40;
+  const gap = 8;
+
+  const leftSlots = leftFinalists.map((pos, i) => renderFinalist(pos, midY - trophyH / 2 - gap - (leftFinalists.length - i) * (SLOT_H + gap)));
+  const rightSlots = rightFinalists.map((pos, i) => renderFinalist(pos, midY + trophyH / 2 + gap + i * (SLOT_H + gap)));
+
+  return (
+    <g>
+      {leftSlots}
+      {rightSlots}
+
+      {/* Trophy / champion */}
+      <text x={xCenter} y={midY - 12} textAnchor="middle" fontSize="24" dominantBaseline="central">🏆</text>
+      {champion ? (
+        <>
+          <text x={xCenter} y={midY + 14} textAnchor="middle" fontSize="9" fill="#f59e0b" fontFamily="'Barlow Condensed', Arial Narrow, Arial" fontWeight="700" letterSpacing="1">
+            CHAMPION
+          </text>
+          <text x={xCenter} y={midY + 28} textAnchor="middle" fontSize="12" fill="#f59e0b" fontFamily="'Barlow Condensed', Arial Narrow, Arial" fontWeight="800">
+            {entryByPos[champion]?.bowler_name}
+          </text>
+        </>
+      ) : (
+        <text x={xCenter} y={midY + 18} textAnchor="middle" fontSize="9" fill="#374151" fontFamily="'Barlow Condensed', Arial Narrow, Arial">
+          awaiting finalists
+        </text>
+      )}
+    </g>
+  );
+}
+
+function Screen({ children }) {
+  return (
+    <div style={{ background: "#0a0c0f", width: "100vw", height: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {children}
     </div>
   );
 }
 
-function MatchupGroup({ positions, game, entryByPos, winners, getScoreDisplay, side, isHandicap }) {
+function Tag({ color, children }) {
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "center", gap: "1px" }}>
-      {positions.map((pos) => {
-        const entry = entryByPos[pos];
-        const isWinner = winners.includes(pos);
-        const isEliminated = winners.length > 0 && !isWinner;
-        const scoreInfo = getScoreDisplay(pos, game);
-
-        return (
-          <div key={pos} style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "3px",
-            padding: "1px 4px",
-            borderRadius: "2px",
-            background: isWinner ? "rgba(245,158,11,0.15)" : isEliminated ? "transparent" : "rgba(30,36,45,0.8)",
-            borderLeft: side === "left" ? `2px solid ${isWinner ? "#f59e0b" : isEliminated ? "#1e242d" : "#2a313d"}` : "none",
-            borderRight: side === "right" ? `2px solid ${isWinner ? "#f59e0b" : isEliminated ? "#1e242d" : "#2a313d"}` : "none",
-            opacity: isEliminated ? 0.35 : 1,
-          }}>
-            <span style={{ fontSize: "0.55rem", color: "#475569", minWidth: "16px", textAlign: "right", fontWeight: 600 }}>{pos}</span>
-            <span style={{
-              flex: 1,
-              fontSize: "0.65rem",
-              fontWeight: isWinner ? 700 : 400,
-              color: isWinner ? "#f59e0b" : "#e2e8f0",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              textDecoration: isEliminated ? "line-through" : "none",
-            }}>
-              {entry ? entry.bowler_name : <span style={{ color: "#374151" }}>—</span>}
-            </span>
-            {scoreInfo && (
-              <span style={{
-                fontSize: isHandicap ? "0.55rem" : "0.65rem",
-                fontWeight: 700,
-                color: isWinner ? "#f59e0b" : "#94a3b8",
-                whiteSpace: "nowrap",
-                textAlign: "right",
-              }}>
-                {scoreInfo.display}
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <span style={{
+      fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
+      padding: "0.15rem 0.45rem", borderRadius: "3px",
+      background: color + "22", color,
+    }}>
+      {children}
+    </span>
   );
 }
 
-function ChampionSlot({ positions, aliveByRound, matchupMap, entryByPos, getScoreDisplay, champion, isHandicap }) {
-  const priorAlive = aliveByRound[5];
-  if (!priorAlive) return <div style={{ width: "100%", minHeight: "28px", background: "#161a20", borderRadius: "4px", border: "1px solid #2a313d" }} />;
-
-  const alive = positions.filter(p => priorAlive.has(p));
-  if (alive.length === 0) return <div style={{ width: "100%", minHeight: "28px", background: "#161a20", borderRadius: "4px", border: "1px solid #2a313d" }} />;
-
-  const key = alive.slice().sort((a, b) => a - b).join(",");
-  const winners = matchupMap[6]?.[key] || [];
-
+function LiveDot() {
   return (
-    <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: "1px" }}>
-      {alive.map(pos => {
-        const entry = entryByPos[pos];
-        const isWinner = winners.includes(pos) || champion === pos;
-        const isEliminated = (winners.length > 0 || champion) && !isWinner;
-        const scoreInfo = getScoreDisplay(pos, 6);
-
-        return (
-          <div key={pos} style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "4px",
-            padding: "3px 6px",
-            borderRadius: "3px",
-            background: isWinner ? "rgba(245,158,11,0.2)" : "#161a20",
-            border: `1px solid ${isWinner ? "#f59e0b" : "#2a313d"}`,
-            opacity: isEliminated ? 0.4 : 1,
-          }}>
-            <span style={{ fontSize: "0.6rem", color: "#475569", minWidth: "16px" }}>{pos}</span>
-            <span style={{ flex: 1, fontSize: "0.7rem", fontWeight: isWinner ? 700 : 400, color: isWinner ? "#f59e0b" : "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-              {entry?.bowler_name || "—"}
-            </span>
-            {scoreInfo && (
-              <span style={{ fontSize: isHandicap ? "0.55rem" : "0.7rem", fontWeight: 700, color: isWinner ? "#f59e0b" : "#94a3b8", whiteSpace: "nowrap" }}>
-                {scoreInfo.display}
-              </span>
-            )}
-          </div>
-        );
-      })}
-    </div>
+    <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.1em", color: "#10b981" }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "pulse-dot 1.5s infinite" }} />
+      LIVE
+    </span>
   );
 }
