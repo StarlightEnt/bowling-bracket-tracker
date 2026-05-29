@@ -18,6 +18,8 @@ export default function AdminChipDraw() {
   const [selectedPos, setSelectedPos] = useState(null);
   const [selectedBowler, setSelectedBowler] = useState("");
   const [msg, setMsg] = useState(null);
+  const [autoMsg, setAutoMsg] = useState(null);
+  const [autoLoading, setAutoLoading] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/brackets").then((r) => r.json()).then((d) => setBrackets(d.brackets || []));
@@ -108,6 +110,20 @@ export default function AdminChipDraw() {
       </div>
 
       {selectedBracket && (
+        <>
+          {/* Auto draw button */}
+          <div className="card" style={{ background: "var(--color-surface-2)", border: "1px solid var(--color-border)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "1rem" }}>
+              <div>
+                <div style={{ fontFamily: "var(--font-display)", fontWeight: 700, fontSize: "0.9rem", color: "var(--color-amber)" }}>🎱 Auto-Fill Chip Draw</div>
+                <div style={{ fontSize: "0.8rem", color: "var(--color-text-muted)", marginTop: "0.2rem" }}>Randomly assigns all available bowlers to open slots in {selectedBracket.name}</div>
+              </div>
+              <button className="btn btn-primary" onClick={handleAutoDraw} disabled={autoLoading || entries.length >= 64}>
+                {autoLoading ? "Assigning..." : entries.length >= 64 ? "Bracket Full" : "Auto-Fill All Slots"}
+              </button>
+            </div>
+            {autoMsg && <div className={`alert alert-${autoMsg.type}`} style={{ marginTop: "0.75rem" }}>{autoMsg.text}</div>}
+          </div>
         <>
           {/* Step 2: Select quadrant */}
           <div className="card">
