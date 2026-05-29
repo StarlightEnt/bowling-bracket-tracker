@@ -34,11 +34,9 @@ export default function BracketDetailPage() {
 
   const { bracket, entries, matchups } = data;
 
-  // Build a lookup: position -> entry
   const entryByPos = {};
   for (const e of entries) entryByPos[e.position] = e;
 
-  // Build a matchup lookup: gameNumber -> positions string -> winner positions
   const matchupMap = {};
   for (const m of matchups) {
     if (!matchupMap[m.game_number]) matchupMap[m.game_number] = {};
@@ -50,9 +48,35 @@ export default function BracketDetailPage() {
     }
   }
 
-  // For each round, compute which positions are alive and their matchup groups
-  const rounds = [];
+  // Determine which positions are alive after each round
+  const aliveByRound = {};
+  aliveByRound[0] = new Set(entries.map((e) => e.position));
+
   for (let game = 1; game <= TOTAL_ROUNDS; game++) {
+    const roundMatchups = matchupMap[game] || {};
+    const winners = new Set();
+    for (const winnerPositions of Object.values(roundMatchups)) {
+      for (const wp of winnerPositions) winners.add(wp);
+    }
+    aliveByRound[game] = winners.size > 0 ? winners : null;
+  }
+
+  // Only show rounds that have actually been reached
+  // Game 1 always shows if there are entries
+  // Game N only shows if game N-1 produced winners
+  const visibleUpToGame = (() => {
+    if (entries.length === 0) return 0;
+    let maxVisible = 1;
+    for (let g = 2; g <= TOTAL_ROUNDS; g++) {
+      if (aliveByRound[g - 1] && aliveByRound[g - 1].size > 0) {
+        maxVisible = g;
+      }
+    }
+    return maxVisible;
+  })();
+
+  const rounds = [];
+  for (let game = 1; game <= visibleUpToGame; game++) {
     const groupSize = Math.pow(2, game);
     const groups = [];
     for (let slotStart = 1; slotStart <= 64; slotStart += groupSize) {
@@ -64,19 +88,6 @@ export default function BracketDetailPage() {
       if (posInSlot.length > 0) groups.push(posInSlot);
     }
     rounds.push({ game, groups });
-  }
-
-  // Determine alive positions per round
-  const aliveByRound = {};
-  aliveByRound[0] = new Set(entries.map((e) => e.position));
-
-  for (let game = 1; game <= TOTAL_ROUNDS; game++) {
-    const roundMatchups = matchupMap[game] || {};
-    const winners = new Set();
-    for (const winnerPositions of Object.values(roundMatchups)) {
-      for (const wp of winnerPositions) winners.add(wp);
-    }
-    aliveByRound[game] = winners.size > 0 ? winners : null; // null = not yet resolved
   }
 
   const isHandicap = bracket.bracket_type === "handicap";
@@ -97,82 +108,4 @@ export default function BracketDetailPage() {
         <p style={{ color: "var(--color-text-muted)", marginTop: "0.25rem", fontSize: "0.85rem" }}>
           {entries.length} / 64 entries
           {isHandicap && " · Scores include handicap"}
-          {lastUpdate && ` · Updated ${lastUpdate.toLocaleTimeString()}`}
-        </p>
-      </div>
-
-      {/* Bracket visual */}
-      <div style={{ overflowX: "auto", paddingBottom: "1rem" }}>
-        <div className="bracket-grid" style={{ gridTemplateColumns: `repeat(${TOTAL_ROUNDS}, minmax(160px, 1fr))` }}>
-          {rounds.map(({ game, groups }) => {
-            const priorAlive = aliveByRound[game - 1];
-            const thisAlive = aliveByRound[game];
-
-            return (
-              <div key={game} className="bracket-round">
-                <div className="round-label">{ROUND_LABELS[game - 1]}</div>
-                {groups.map((positions) => {
-                  // Filter to positions that were alive entering this round
-                  const alivePositions = priorAlive
-                    ? positions.filter((p) => priorAlive.has(p))
-                    : positions;
-                  if (alivePositions.length === 0) return null;
-
-                  const posKey = alivePositions.slice().sort((a,b)=>a-b).join(",");
-                  const winnerPositions = matchupMap[game]?.[posKey] || [];
-
-                  return (
-                    <div key={positions.join("-")} className="bracket-matchup">
-                      {alivePositions.map((pos) => {
-                        const entry = entryByPos[pos];
-                        const isWinner = winnerPositions.includes(pos);
-                        const isEliminated = winnerPositions.length > 0 && !isWinner;
-                        const score = entry?.effectiveByGame?.[game];
-
-                        let cls = "bracket-entry";
-                        if (isWinner) cls += " winner";
-                        else if (isEliminated) cls += " eliminated";
-
-                        return (
-                          <div key={pos} className={cls}>
-                            <span className="entry-pos">{pos}</span>
-                            <span className="entry-name">
-                              {entry ? entry.bowler_name : <em>Empty</em>}
-                            </span>
-                            <span className="entry-score">
-                              {score !== undefined ? score : "—"}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Champion display */}
-      {aliveByRound[6]?.size === 1 && (
-        <div style={{
-          marginTop: "2rem",
-          textAlign: "center",
-          padding: "2rem",
-          background: "var(--color-surface)",
-          borderRadius: "var(--radius-lg)",
-          border: "2px solid var(--color-amber)"
-        }}>
-          <div style={{ fontSize: "2rem" }}>🏆</div>
-          <div style={{ fontFamily: "var(--font-display)", fontSize: "2rem", fontWeight: 800, color: "var(--color-amber)", marginTop: "0.5rem" }}>
-            Champion
-          </div>
-          <div style={{ fontSize: "1.3rem", marginTop: "0.25rem" }}>
-            {entryByPos[[...aliveByRound[6]][0]]?.bowler_name}
-          </div>
-        </div>
-      )}
-    </Layout>
-  );
-}
+          {lastUpdate &
