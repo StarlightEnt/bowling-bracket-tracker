@@ -134,7 +134,7 @@ export default function BracketPage() {
               onMouseEnter={e => { e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.borderColor = "#334155"; }}
               onMouseLeave={e => { e.currentTarget.style.color = "#64748b"; e.currentTarget.style.borderColor = "#1e293b"; }}
             >
-              ◀ Brackets
+              ◀ MegaBrackets
             </Link>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               {settings.tournament_logo_url ? (
