@@ -241,28 +241,42 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
   for (let game = 1; game <= 5; game++) {
     const groupSize = Math.pow(2, game);
 
-    // Column X position
-    // Left: game1 = col0 = colsX, game5 = col4
-    // Right: game1 = col4 = colsX + 4*(COL_W+COL_GAP), game5 = col0 = colsX
+    // Column X:
+    // Left:  game1=col0 (leftmost),  game5=col4 (rightmost, closest to center)
+    // Right: game1=col4 (rightmost), game5=col0 (leftmost,  closest to center)
     const colIdx = isRight ? (5 - game) : (game - 1);
     const colX = colsX + colIdx * (COL_W + COL_GAP);
 
-    // Bracket lines are on the side FACING the next round (toward center)
-    // Left side: next round is to the RIGHT -> bracket lines on RIGHT edge of cell
-    // Right side: next round is to the LEFT -> bracket lines on LEFT edge of cell
-    const bracketLineX = isRight ? colX : colX + COL_W;  // inner edge toward center
+    // The bracket line (vertical connector) lives in the GAP between this column
+    // and the next column (which is toward center).
+    // Left side:  next col is to the RIGHT => bracket line on RIGHT edge of cell = colX + COL_W
+    // Right side: next col is to the LEFT  => bracket line on LEFT  edge of cell = colX
+    const bracketX = isRight ? colX : colX + COL_W;
+
+    // The stub goes from the FAR edge of the cell (away from center) to bracketX.
+    // Left side:  far edge = left edge  = colX
+    // Right side: far edge = right edge = colX + COL_W
+    const stubStartX = isRight ? colX + COL_W : colX;
+
+    // The feed line goes from bracketX across the gap to the bracket line of the NEXT column.
+    // Next column's bracket line X:
+    // Left side:  next colIdx = game, nextColX = colsX + game*(COL_W+COL_GAP), bracketX = nextColX
+    // Right side: next colIdx = 5-(game+1)=4-game, nextColX = colsX+(4-game)*(COL_W+COL_GAP), bracketX = nextColX+COL_W
+    const nextColIdx = isRight ? (4 - game) : game;
+    const nextColX = colsX + nextColIdx * (COL_W + COL_GAP);
+    const feedEndX = isRight ? nextColX + COL_W : nextColX;
 
     for (let gi = 0; gi < 32 / groupSize; gi++) {
       const positions = half.slice(gi * groupSize, (gi + 1) * groupSize);
 
-      // Exact Y span based on original game-1 slot indices
+      // Y span: based on exact pixel positions of the original game-1 slots
       const firstIdx = positions[0] - startPos;
-      const lastIdx = positions[positions.length - 1] - startPos;
-      const groupTopY = yOffset + firstIdx * SLOT_SPACING;
-      const groupBotY = yOffset + (lastIdx + 1) * SLOT_SPACING;
+      const lastIdx  = positions[positions.length - 1] - startPos;
+      const groupTopY    = yOffset + firstIdx * SLOT_SPACING;
+      const groupBotY    = yOffset + (lastIdx + 1) * SLOT_SPACING;
       const groupCenterY = (groupTopY + groupBotY) / 2;
 
-      // Build slot data
+      // Build slot list
       let slots = [];
       if (game === 1) {
         const winners = winnersOf(positions, 1);
@@ -284,55 +298,51 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
           status: winners.length > 0 ? (winners.includes(pos) ? "winner" : "lost") : "pending",
         }));
       }
-
       if (slots.length === 0) continue;
 
-      // Stack slots centered exactly on groupCenterY
+      // Stack slots centered on groupCenterY
       const totalH = slots.length * SLOT_H + Math.max(0, slots.length - 1) * SLOT_GAP;
       const stackTopY = groupCenterY - totalH / 2;
 
-      // Draw bracket lines FIRST (behind cells)
+      // --- BRACKET LINES (drawn behind cells) ---
+
+      // 1. Vertical line connecting midpoints of top and bottom slots
       if (slots.length > 1) {
-        // Vertical line connecting midpoints of first and last slot
         const topMidY = stackTopY + SLOT_H / 2;
         const botMidY = stackTopY + (slots.length - 1) * (SLOT_H + SLOT_GAP) + SLOT_H / 2;
         els.push(<line key={`vert-${game}-${gi}`}
-          x1={bracketLineX} y1={topMidY}
-          x2={bracketLineX} y2={botMidY}
+          x1={bracketX} y1={topMidY}
+          x2={bracketX} y2={botMidY}
           stroke="#2a3545" strokeWidth="1.5" />);
       }
 
-      // Horizontal line from bracket point to next column's cell center
-      // This feeds into the next game's cell which will be at groupCenterY
+      // 2. Horizontal feed line from bracketX to next column's bracketX, at groupCenterY
       if (game < 5) {
-        const nextColIdx = isRight ? (5 - (game + 1)) : game; // next game's column
-        const nextColX = colsX + nextColIdx * (COL_W + COL_GAP);
-        const nextBracketX = isRight ? nextColX + COL_W : nextColX;  // outer edge of next col
-        els.push(<line key={`horiz-${game}-${gi}`}
-          x1={bracketLineX} y1={groupCenterY}
-          x2={nextBracketX} y2={groupCenterY}
+        els.push(<line key={`feed-${game}-${gi}`}
+          x1={bracketX} y1={groupCenterY}
+          x2={feedEndX} y2={groupCenterY}
           stroke="#2a3545" strokeWidth="1.5" />);
       }
 
-      // Draw slots
+      // --- SLOTS ---
       slots.forEach((slot, si) => {
         const slotY = stackTopY + si * (SLOT_H + SLOT_GAP);
-        const midY = slotY + SLOT_H / 2;
+        const midY  = slotY + SLOT_H / 2;
 
-        // Short stub from cell edge to bracket line X
+        // Stub: from far edge of cell to bracketX
         els.push(<line key={`stub-${game}-${gi}-${si}`}
-          x1={isRight ? colX + COL_W : colX} y1={midY}
-          x2={bracketLineX} y2={midY}
+          x1={stubStartX} y1={midY}
+          x2={bracketX}   y2={midY}
           stroke={slot.status === "winner" ? "#f59e0b" : "#1e2a38"} strokeWidth="1" />);
 
-        // Cell
+        // Cell background
         els.push(<rect key={`bg-${game}-${gi}-${si}`}
           x={colX} y={slotY} width={COL_W} height={SLOT_H}
           fill={slot.status === "winner" ? "rgba(245,158,11,0.13)" : "rgba(16,20,26,0.95)"}
           stroke={slot.status === "winner" ? "#f59e0b" : "#1e2a38"}
           strokeWidth="0.75" rx="2" />);
 
-        // Position number outside (game 1 only)
+        // Position number (game 1 only, outside cell)
         if (game === 1) {
           els.push(<text key={`posn-${gi}-${si}`}
             x={isRight ? posX + POS_W : posX + POS_W - 2}
@@ -348,7 +358,7 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
         // Name
         if (slot.name) {
           const maxChars = isHdcp ? 15 : 20;
-          const dn = slot.name.length > maxChars ? slot.name.slice(0, maxChars - 1) + "…" : slot.name;
+          const dn = slot.name.length > maxChars ? slot.name.slice(0, maxChars - 1) + "\u2026" : slot.name;
           const nameY = isHdcp && slot.score ? slotY + SLOT_H * 0.36 : midY;
           els.push(<text key={`name-${game}-${gi}-${si}`}
             x={colX + 6} y={nameY}
@@ -390,6 +400,7 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
 
   return <g>{els}</g>;
 }
+
 
 function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, yOffset, getScore, isHdcp }) {
   const slotW = CENTER_W - 16;
