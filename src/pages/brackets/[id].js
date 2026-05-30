@@ -543,17 +543,30 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       {renderFinalistCell(rightPos, rightCellX, rightCenterY, "right")}
 
       {/* Tournament logo — absolute center of bracket */}
-      {logoUrl && (
-        <image
-          href={logoUrl}
-          x={xCenter - 75}
-          y={midY - 75}
-          width={150}
-          height={150}
-          preserveAspectRatio="xMidYMid meet"
-          opacity="0.9"
-        />
-      )}
+      {logoUrl && (() => {
+        const logoSize = 150;
+        const lx = xCenter - logoSize / 2;
+        const ly = midY - logoSize / 2;
+        return (
+          <g>
+            <defs>
+              <clipPath id="logo-clip">
+                <rect x={lx} y={ly} width={logoSize} height={logoSize} />
+              </clipPath>
+            </defs>
+            <image
+              href={logoUrl}
+              x={lx}
+              y={ly}
+              width={logoSize}
+              height={logoSize}
+              preserveAspectRatio="xMidYMid meet"
+              clipPath="url(#logo-clip)"
+              opacity="0.9"
+            />
+          </g>
+        );
+      })()}
 
       {/* Champion name — below logo once known */}
       {champion && (
