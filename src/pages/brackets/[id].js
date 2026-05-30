@@ -5,7 +5,6 @@ import Head from "next/head";
 const TOTAL_ROUNDS = 6;
 const ROUND_LABELS = ["Gm 1", "Gm 2", "Gm 3", "Gm 4", "Gm 5", "Gm 6"];
 
-// 1080p layout
 const DISPLAY_W = 1920;
 const DISPLAY_H = 1080;
 const HEADER_H = 44;
@@ -13,20 +12,12 @@ const PADDING = 8;
 const USABLE_H = DISPLAY_H - HEADER_H - PADDING * 2;
 const ROUND_LABEL_H = 24;
 const SLOT_H = 26;
-const SLOT_GAP = 4;
-
-// Position numbers sit OUTSIDE the bracket area with consistent spacing
-const POS_W = 28;      // width of position number column
-const POS_GAP = 6;     // gap between position number and cell
-
 const CENTER_W = 180;
-const COL_GAP = 24;    // gap between columns — bracket lines live here
-
-// Each half = POS_W + POS_GAP + 5*COL_W + 4*COL_GAP
+const POS_W = 28;
+const POS_GAP = 6;
+const COL_GAP = 24;
 const HALF_W = (DISPLAY_W - CENTER_W - PADDING * 2) / 2;
 const COL_W = Math.floor((HALF_W - POS_W - POS_GAP - 4 * COL_GAP) / 5);
-
-// Vertical slot spacing — 32 slots fill USABLE_H
 const SLOT_SPACING = USABLE_H / 32;
 
 export default function BracketPage() {
@@ -83,9 +74,9 @@ export default function BracketPage() {
     return { total: raw + hdcp, hdcp, raw };
   };
 
-  const winnersOf = (alive, game) => {
-    if (!alive || alive.length === 0) return [];
-    const key = alive.slice().sort((a, b) => a - b).join(",");
+  const winnersOf = (positions, game) => {
+    if (!positions || positions.length === 0) return [];
+    const key = positions.slice().sort((a, b) => a - b).join(",");
     return matchupMap[game]?.[key] || [];
   };
 
@@ -97,15 +88,8 @@ export default function BracketPage() {
 
   const svgW = DISPLAY_W - PADDING * 2;
   const svgH = USABLE_H + ROUND_LABEL_H + 4;
-
-  // Left half: pos numbers on left edge, columns go right, bracket lines on RIGHT of each col
-  // xOffset = where col 0 (Game1) starts = POS_W + POS_GAP
   const leftColsX = POS_W + POS_GAP;
-  // Right half: pos numbers on right edge, columns go left (Game1 rightmost)
-  // xOffset = where the right half starts
   const rightHalfX = HALF_W + CENTER_W + COL_GAP;
-  // Right half Game1 col starts at: rightHalfX + 4*(COL_W+COL_GAP)
-  // pos numbers are to the RIGHT of game1 col: rightHalfX + 5*(COL_W+COL_GAP) - COL_GAP + POS_GAP
 
   return (
     <>
@@ -150,7 +134,6 @@ export default function BracketPage() {
           >
             <defs><style>{`@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}`}</style></defs>
 
-            {/* Round labels left */}
             {[0,1,2,3,4].map(i => (
               <text key={`ll${i}`}
                 x={leftColsX + i * (COL_W + COL_GAP) + COL_W / 2}
@@ -163,7 +146,6 @@ export default function BracketPage() {
               </text>
             ))}
 
-            {/* Round labels right — Gm1 on far right, Gm5 closest to center */}
             {[0,1,2,3,4].map(i => (
               <text key={`rl${i}`}
                 x={rightHalfX + (4 - i) * (COL_W + COL_GAP) + COL_W / 2}
@@ -176,7 +158,6 @@ export default function BracketPage() {
               </text>
             ))}
 
-            {/* Final label */}
             <text x={HALF_W + CENTER_W / 2} y={ROUND_LABEL_H / 2 + 4}
               textAnchor="middle" dominantBaseline="central"
               fontSize="12" fill="#f59e0b"
@@ -185,12 +166,10 @@ export default function BracketPage() {
               {ROUND_LABELS[5].toUpperCase()} — FINAL
             </text>
 
-            {/* Left half */}
             <BracketHalf
               startPos={1} side="left"
               colsX={leftColsX}
-              posX={0}
-              posAnchor="end"
+              posNumX={POS_W - 2}
               yOffset={ROUND_LABEL_H}
               entryByPos={entryByPos}
               aliveAfter={aliveAfter}
@@ -199,12 +178,10 @@ export default function BracketPage() {
               isHdcp={isHdcp}
             />
 
-            {/* Right half */}
             <BracketHalf
               startPos={33} side="right"
               colsX={rightHalfX}
-              posX={rightHalfX + 5 * (COL_W + COL_GAP) - COL_GAP + POS_GAP}
-              posAnchor="start"
+              posNumX={rightHalfX + 5 * (COL_W + COL_GAP) - COL_GAP + POS_GAP + POS_W}
               yOffset={ROUND_LABEL_H}
               entryByPos={entryByPos}
               aliveAfter={aliveAfter}
@@ -213,7 +190,6 @@ export default function BracketPage() {
               isHdcp={isHdcp}
             />
 
-            {/* Championship */}
             <Finals
               leftFinalists={leftFinalists}
               rightFinalists={rightFinalists}
@@ -233,208 +209,160 @@ export default function BracketPage() {
   );
 }
 
-function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByPos, aliveAfter, winnersOf, getScore, isHdcp }) {
+function BracketHalf({ startPos, side, colsX, posNumX, yOffset, entryByPos, aliveAfter, winnersOf, getScore, isHdcp }) {
   const isRight = side === "right";
   const half = Array.from({ length: 32 }, (_, i) => i + startPos);
   const els = [];
 
   for (let game = 1; game <= 5; game++) {
-    const groupSize = Math.pow(2, game); // how many original pos 1 slots this round spans
-
-    // Column X
+    // Column X: left=game1 leftmost, right=game1 rightmost
     const colIdx = isRight ? (5 - game) : (game - 1);
     const colX = colsX + colIdx * (COL_W + COL_GAP);
 
-    // Bracket line X — on the side facing the next round (toward center)
-    // Left side: right edge of cell
-    // Right side: left edge of cell
+    // Bracket line X is on the side facing next round (toward center)
+    // Left: right edge of cell; Right: left edge of cell
     const bracketX = isRight ? colX : colX + COL_W;
+    // Stub starts from opposite (outer) edge
+    const stubX = isRight ? colX + COL_W : colX;
 
-    // Stub start X — opposite side (away from center)
-    const stubStartX = isRight ? colX + COL_W : colX;
-
-    // Feed line end X — bracket line of next column (toward center)
+    // Feed line end: bracket line X of next column
     const nextColIdx = isRight ? (4 - game) : game;
     const nextColX = colsX + nextColIdx * (COL_W + COL_GAP);
     const feedEndX = isRight ? nextColX + COL_W : nextColX;
 
-    // Number of game-1 pairs that each slot in this round spans
-    // Game 1: each slot spans 1 game-1 slot
-    // Game 2: each slot spans 2 game-1 slots (a pair)
-    // Game 3: each slot spans 4 game-1 slots, etc.
-    const slotsPerCell = Math.pow(2, game - 1); // game1=1, game2=2, game3=4...
+    // Each cell in this round independently occupies a span of game-1 slots
+    // Game 1: span=1, Game 2: span=2, Game 3: span=4, Game 4: span=8, Game 5: span=16
+    const span = Math.pow(2, game - 1);
+    const numCells = 32 / span;
 
-    // Iterate over every possible slot position in this round
-    // There are 32/slotsPerCell positions, each independently centered
-    const numSlots = 32 / slotsPerCell;
-
-    for (let si = 0; si < numSlots; si++) {
-      // The original game-1 positions this slot represents
-      const firstOrigIdx = si * slotsPerCell;
-      const lastOrigIdx  = firstOrigIdx + slotsPerCell - 1;
+    for (let ci = 0; ci < numCells; ci++) {
+      const firstOrigIdx = ci * span;
+      const lastOrigIdx = firstOrigIdx + span - 1;
       const positions = half.slice(firstOrigIdx, lastOrigIdx + 1);
 
-      // Vertical center of this slot — midpoint of its game-1 source span
-      const topY    = yOffset + firstOrigIdx * SLOT_SPACING;
-      const botY    = yOffset + (lastOrigIdx + 1) * SLOT_SPACING;
+      // This cell's vertical center = midpoint of its game-1 source span
+      const topY = yOffset + firstOrigIdx * SLOT_SPACING;
+      const botY = yOffset + (lastOrigIdx + 1) * SLOT_SPACING;
       const centerY = (topY + botY) / 2;
-      const slotY   = centerY - SLOT_H / 2;
-      const midY    = centerY;
+      const slotY = centerY - SLOT_H / 2;
+      const midY = centerY;
 
-      // Determine what to show in this slot
-      let slotData = null;
+      // Determine slot content
+      let pos = null;
+      let status = "empty";
 
       if (game === 1) {
-        // Game 1: show the actual bowler at this position
-        const pos = positions[0];
-        const score = getScore(pos, 1);
-        const pairPositions = [positions[0], half[firstOrigIdx % 2 === 0 ? firstOrigIdx + 1 : firstOrigIdx - 1]];
-        // Find this pair's winners
-        const pairStart = firstOrigIdx % 2 === 0 ? firstOrigIdx : firstOrigIdx - 1;
-        const pair = half.slice(pairStart, pairStart + 2);
+        pos = positions[0];
+        // Find this position's pair
+        const pairIdx = ci % 2 === 0 ? ci + 1 : ci - 1;
+        const pairPos = half[pairIdx * span];
+        const pair = [pos, pairPos].sort((a, b) => a - b);
         const winners = winnersOf(pair, 1);
-        slotData = {
-          pos,
-          name: entryByPos[pos]?.bowler_name || "",
-          score,
-          status: winners.length > 0 ? (winners.includes(pos) ? "winner" : "lost") : "pending",
-          isPair: false,
-        };
+        status = winners.length > 0 ? (winners.includes(pos) ? "winner" : "lost") : "pending";
       } else {
-        // Game N: show the winner of this slot's source matchup (if they exist)
+        // Show the winner of the source matchup from the previous round
         const priorAlive = aliveAfter[game - 1];
         if (!priorAlive) continue;
         const alive = positions.filter(p => priorAlive.has(p));
-        if (alive.length === 0) continue;
-        if (alive.length !== 1) continue; // need exactly 1 winner to show a cell
-
-        const pos = alive[0];
-        const score = getScore(pos, game);
-        const winners = winnersOf(alive, game); // will be resolved in a later game
-        // Check if this position has won this game yet
+        if (alive.length !== 1) continue; // no winner yet or ambiguous
+        pos = alive[0];
         const thisGameAlive = aliveAfter[game];
-        const isWinner = thisGameAlive ? thisGameAlive.has(pos) : false;
-        const hasResult = thisGameAlive !== null;
-        slotData = {
-          pos,
-          name: entryByPos[pos]?.bowler_name || "",
-          score,
-          status: hasResult ? (isWinner ? "winner" : "lost") : "pending",
-        };
+        status = thisGameAlive
+          ? (thisGameAlive.has(pos) ? "winner" : "lost")
+          : "pending";
       }
 
-      if (!slotData) continue;
+      if (pos === null) continue;
 
-      // Draw bracket lines for game 1 pairs
-      // The vertical line and feed to game 2 are drawn per-PAIR (every 2 game-1 slots)
-      if (game === 1 && firstOrigIdx % 2 === 0) {
-        // This is the first of a pair — draw the bracket structure for this pair
-        const pairTopY    = yOffset + firstOrigIdx * SLOT_SPACING;
-        const pairBotY    = yOffset + (firstOrigIdx + 2) * SLOT_SPACING;
-        const pairCenterY = (pairTopY + pairBotY) / 2;
-        const topMidY     = yOffset + firstOrigIdx * SLOT_SPACING + SLOT_SPACING / 2;
-        const botMidY     = yOffset + (firstOrigIdx + 1) * SLOT_SPACING + SLOT_SPACING / 2;
+      const score = getScore(pos, game);
+      const name = entryByPos[pos]?.bowler_name || "";
 
-        // Vertical line between the two pair cells
-        els.push(<line key={`vert1-${si}`}
-          x1={bracketX} y1={topMidY}
-          x2={bracketX} y2={botMidY}
+      // Draw bracket connector lines
+      // For each cell, draw its stub AND the vertical+feed lines for its pair grouping
+      // Pair grouping: cells ci=0&1 form a pair for game+1, ci=2&3 form a pair, etc.
+      const isFirstOfPair = ci % 2 === 0;
+
+      if (isFirstOfPair && game < 5) {
+        // Check if the paired cell also has a winner (so we can draw the bracket)
+        const pairCI = ci + 1;
+        const pairFirstIdx = pairCI * span;
+        const pairLastIdx = pairFirstIdx + span - 1;
+        const pairPositions = half.slice(pairFirstIdx, pairLastIdx + 1);
+
+        let pairCenterY = yOffset + (pairFirstIdx + span / 2) * SLOT_SPACING;
+
+        // Vertical line between this cell's center and the pair cell's center
+        els.push(<line key={`vert-${game}-${ci}`}
+          x1={bracketX} y1={midY}
+          x2={bracketX} y2={pairCenterY}
           stroke="#2a3545" strokeWidth="1.5" />);
 
-        // Horizontal feed to game 2 cell center
-        els.push(<line key={`feed1-${si}`}
-          x1={bracketX} y1={pairCenterY}
-          x2={feedEndX} y2={pairCenterY}
+        // Feed line from midpoint between the two to next column
+        const feedY = (midY + pairCenterY) / 2;
+        els.push(<line key={`feed-${game}-${ci}`}
+          x1={bracketX} y1={feedY}
+          x2={feedEndX} y2={feedY}
           stroke="#2a3545" strokeWidth="1.5" />);
       }
 
-      // For game 2+, draw bracket lines per group of 2 cells at this level
-      if (game >= 2 && game < 5) {
-        const isFirstOfPair = si % 2 === 0;
-        if (isFirstOfPair) {
-          // Pair: slot si and slot si+1
-          const topCenterY = yOffset + (si * slotsPerCell + slotsPerCell / 2) * SLOT_SPACING;
-          const botCenterY = yOffset + ((si + 1) * slotsPerCell + slotsPerCell / 2) * SLOT_SPACING;
-          const pairMidY   = (topCenterY + botCenterY) / 2;
+      // Stub from outer cell edge to bracket line
+      els.push(<line key={`stub-${game}-${ci}`}
+        x1={stubX} y1={midY} x2={bracketX} y2={midY}
+        stroke={status === "winner" ? "#f59e0b" : "#1e2a38"} strokeWidth="1" />);
 
-          // Only draw if both slots have alive players
-          const nextPairPositions = half.slice((si + 1) * slotsPerCell, (si + 2) * slotsPerCell);
-          const priorAlive = aliveAfter[game - 1];
-          const nextAlive = priorAlive ? nextPairPositions.filter(p => priorAlive.has(p)) : [];
-
-          if (nextAlive.length === 1) {
-            els.push(<line key={`vert-${game}-${si}`}
-              x1={bracketX} y1={topCenterY}
-              x2={bracketX} y2={botCenterY}
-              stroke="#2a3545" strokeWidth="1.5" />);
-            els.push(<line key={`feed-${game}-${si}`}
-              x1={bracketX} y1={pairMidY}
-              x2={feedEndX} y2={pairMidY}
-              stroke="#2a3545" strokeWidth="1.5" />);
-          }
-        }
-      }
-
-      // Draw the cell
-      els.push(<rect key={`bg-${game}-${si}`}
+      // Cell background
+      els.push(<rect key={`bg-${game}-${ci}`}
         x={colX} y={slotY} width={COL_W} height={SLOT_H}
-        fill={slotData.status === "winner" ? "rgba(245,158,11,0.13)" : "rgba(16,20,26,0.95)"}
-        stroke={slotData.status === "winner" ? "#f59e0b" : "#1e2a38"}
+        fill={status === "winner" ? "rgba(245,158,11,0.13)" : "rgba(16,20,26,0.95)"}
+        stroke={status === "winner" ? "#f59e0b" : "#1e2a38"}
         strokeWidth="0.75" rx="2" />);
 
-      // Stub line from cell edge to bracket line
-      els.push(<line key={`stub-${game}-${si}`}
-        x1={stubStartX} y1={midY}
-        x2={bracketX}   y2={midY}
-        stroke={slotData.status === "winner" ? "#f59e0b" : "#1e2a38"} strokeWidth="1" />);
-
-      // Position number (game 1 only, outside cell)
+      // Position number outside (game 1 only)
       if (game === 1) {
-        els.push(<text key={`posn-${si}`}
-          x={isRight ? posX + POS_W : posX + POS_W - 2}
-          y={midY}
-          textAnchor={posAnchor}
+        els.push(<text key={`posn-${ci}`}
+          x={posNumX} y={midY}
+          textAnchor="end"
           dominantBaseline="central"
           fontSize="9" fill="#374151"
           fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="700">
-          {slotData.pos}
+          {pos}
         </text>);
       }
 
       // Name
-      if (slotData.name) {
+      if (name) {
         const maxChars = isHdcp ? 15 : 20;
-        const dn = slotData.name.length > maxChars ? slotData.name.slice(0, maxChars - 1) + "\u2026" : slotData.name;
-        const nameY = isHdcp && slotData.score ? slotY + SLOT_H * 0.36 : midY;
-        els.push(<text key={`name-${game}-${si}`}
+        const dn = name.length > maxChars ? name.slice(0, maxChars - 1) + "…" : name;
+        const nameY = isHdcp && score ? slotY + SLOT_H * 0.36 : midY;
+        els.push(<text key={`name-${game}-${ci}`}
           x={colX + 6} y={nameY}
           dominantBaseline="central" fontSize="12"
-          fill={slotData.status === "winner" ? "#f59e0b" : slotData.status === "lost" ? "#2d3748" : "#cbd5e1"}
+          fill={status === "winner" ? "#f59e0b" : status === "lost" ? "#2d3748" : "#cbd5e1"}
           fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-          fontWeight={slotData.status === "winner" ? "700" : "400"}
-          textDecoration={slotData.status === "lost" ? "line-through" : "none"}>
+          fontWeight={status === "winner" ? "700" : "400"}
+          textDecoration={status === "lost" ? "line-through" : "none"}>
           {dn}
         </text>);
       }
 
       // Score
-      if (slotData.score) {
-        const { total, raw, hdcp } = slotData.score;
+      if (score) {
+        const { total, raw, hdcp } = score;
         const scoreY = isHdcp ? slotY + SLOT_H * 0.36 : midY;
-        els.push(<text key={`total-${game}-${si}`}
+        els.push(<text key={`total-${game}-${ci}`}
           x={colX + COL_W - 4} y={scoreY}
           textAnchor="end" dominantBaseline="central"
           fontSize="13"
-          fill={slotData.status === "winner" ? "#f59e0b" : "#64748b"}
+          fill={status === "winner" ? "#f59e0b" : "#64748b"}
           fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
           {total}
         </text>);
         if (isHdcp && hdcp > 0) {
-          els.push(<text key={`breakdown-${game}-${si}`}
+          els.push(<text key={`breakdown-${game}-${ci}`}
             x={colX + COL_W - 4} y={slotY + SLOT_H * 0.72}
             textAnchor="end" dominantBaseline="central"
             fontSize="8"
-            fill={slotData.status === "winner" ? "rgba(245,158,11,0.55)" : "#374151"}
+            fill={status === "winner" ? "rgba(245,158,11,0.55)" : "#374151"}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial">
             {raw}+{hdcp}
           </text>);
@@ -445,410 +373,6 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
 
   return <g>{els}</g>;
 }
-
-ect, useCallback } from "react";
-import { useRouter } from "next/router";
-import Head from "next/head";
-
-const TOTAL_ROUNDS = 6;
-const ROUND_LABELS = ["Gm 1", "Gm 2", "Gm 3", "Gm 4", "Gm 5", "Gm 6"];
-
-// 1080p layout
-const DISPLAY_W = 1920;
-const DISPLAY_H = 1080;
-const HEADER_H = 44;
-const PADDING = 8;
-const USABLE_H = DISPLAY_H - HEADER_H - PADDING * 2;
-const ROUND_LABEL_H = 24;
-const SLOT_H = 26;
-const SLOT_GAP = 4;
-
-// Position numbers sit OUTSIDE the bracket area with consistent spacing
-const POS_W = 28;      // width of position number column
-const POS_GAP = 6;     // gap between position number and cell
-
-const CENTER_W = 180;
-const COL_GAP = 24;    // gap between columns — bracket lines live here
-
-// Each half = POS_W + POS_GAP + 5*COL_W + 4*COL_GAP
-const HALF_W = (DISPLAY_W - CENTER_W - PADDING * 2) / 2;
-const COL_W = Math.floor((HALF_W - POS_W - POS_GAP - 4 * COL_GAP) / 5);
-
-// Vertical slot spacing — 32 slots fill USABLE_H
-const SLOT_SPACING = USABLE_H / 32;
-
-export default function BracketPage() {
-  const router = useRouter();
-  const { id } = router.query;
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(null);
-
-  const fetchData = useCallback(async () => {
-    if (!id) return;
-    const res = await fetch(`/api/public/brackets?bracket_id=${id}`);
-    if (res.ok) { const json = await res.json(); setData(json); setLastUpdate(new Date()); }
-    setLoading(false);
-  }, [id]);
-
-  useEffect(() => {
-    fetchData();
-    const t = setInterval(fetchData, 30000);
-    return () => clearInterval(t);
-  }, [fetchData]);
-
-  if (loading) return <Screen color="#94a3b8">Loading bracket...</Screen>;
-  if (!data) return <Screen color="#ef4444">Bracket not found.</Screen>;
-
-  const { bracket, entries, matchups } = data;
-  const isHdcp = bracket.bracket_type === "handicap";
-
-  const entryByPos = {};
-  for (const e of entries) entryByPos[e.position] = e;
-
-  const matchupMap = {};
-  for (const m of matchups) {
-    if (!matchupMap[m.game_number]) matchupMap[m.game_number] = {};
-    if (!matchupMap[m.game_number][m.positions]) matchupMap[m.game_number][m.positions] = [];
-    if (m.winner_position) matchupMap[m.game_number][m.positions].push(m.winner_position);
-  }
-
-  const aliveAfter = {};
-  aliveAfter[0] = new Set(entries.map(e => e.position));
-  for (let g = 1; g <= TOTAL_ROUNDS; g++) {
-    const rm = matchupMap[g] || {};
-    const w = new Set();
-    for (const wps of Object.values(rm)) for (const p of wps) w.add(p);
-    aliveAfter[g] = w.size > 0 ? w : null;
-  }
-
-  const getScore = (pos, game) => {
-    const e = entryByPos[pos];
-    if (!e) return null;
-    const raw = e.rawByGame?.[game];
-    if (raw == null) return null;
-    const hdcp = isHdcp ? (e.handicap || 0) : 0;
-    return { total: raw + hdcp, hdcp, raw };
-  };
-
-  const winnersOf = (alive, game) => {
-    if (!alive || alive.length === 0) return [];
-    const key = alive.slice().sort((a, b) => a - b).join(",");
-    return matchupMap[game]?.[key] || [];
-  };
-
-  const leftFinalists = aliveAfter[5] ? [...aliveAfter[5]].filter(p => p <= 32) : [];
-  const rightFinalists = aliveAfter[5] ? [...aliveAfter[5]].filter(p => p >= 33) : [];
-  const allFinalists = [...leftFinalists, ...rightFinalists];
-  const finalWinners = winnersOf(allFinalists, 6);
-  const champion = aliveAfter[6]?.size === 1 ? [...aliveAfter[6]][0] : null;
-
-  const svgW = DISPLAY_W - PADDING * 2;
-  const svgH = USABLE_H + ROUND_LABEL_H + 4;
-
-  // Left half: pos numbers on left edge, columns go right, bracket lines on RIGHT of each col
-  // xOffset = where col 0 (Game1) starts = POS_W + POS_GAP
-  const leftColsX = POS_W + POS_GAP;
-  // Right half: pos numbers on right edge, columns go left (Game1 rightmost)
-  // xOffset = where the right half starts
-  const rightHalfX = HALF_W + CENTER_W + COL_GAP;
-  // Right half Game1 col starts at: rightHalfX + 4*(COL_W+COL_GAP)
-  // pos numbers are to the RIGHT of game1 col: rightHalfX + 5*(COL_W+COL_GAP) - COL_GAP + POS_GAP
-
-  return (
-    <>
-      <Head><title>{bracket.name} — Bracket Tracker</title></Head>
-      <div style={{
-        background: "#0a0c0f", width: "100vw", height: "100vh", overflow: "hidden",
-        display: "flex", flexDirection: "column",
-        fontFamily: "'Barlow Condensed','Arial Narrow',Arial,sans-serif", color: "#e2e8f0",
-      }}>
-        <div style={{
-          height: HEADER_H, flexShrink: 0, display: "flex", alignItems: "center",
-          justifyContent: "space-between", padding: "0 1rem",
-          background: "#111418", borderBottom: "2px solid #f59e0b",
-        }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#f59e0b", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              🎳 {bracket.name}
-            </span>
-            <span style={{
-              fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-              padding: "0.2rem 0.5rem", borderRadius: "3px",
-              background: isHdcp ? "rgba(16,185,129,0.2)" : "rgba(59,130,246,0.2)",
-              color: isHdcp ? "#10b981" : "#3b82f6",
-            }}>{bracket.bracket_type}</span>
-            {bracket.status === "active" && (
-              <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", color: "#10b981" }}>
-                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#10b981", display: "inline-block", animation: "pulse-dot 1.5s infinite" }} />
-                LIVE
-              </span>
-            )}
-          </div>
-          <div style={{ fontSize: "0.65rem", color: "#475569" }}>
-            {entries.length}/64 entries{lastUpdate ? `  ·  updated ${lastUpdate.toLocaleTimeString()}` : ""}
-          </div>
-        </div>
-
-        <div style={{ flex: 1, overflow: "hidden", padding: `${PADDING}px` }}>
-          <svg width="100%" height="100%"
-            viewBox={`0 0 ${svgW} ${svgH}`}
-            preserveAspectRatio="xMidYMid meet"
-            style={{ display: "block" }}
-          >
-            <defs><style>{`@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}`}</style></defs>
-
-            {/* Round labels left */}
-            {[0,1,2,3,4].map(i => (
-              <text key={`ll${i}`}
-                x={leftColsX + i * (COL_W + COL_GAP) + COL_W / 2}
-                y={ROUND_LABEL_H / 2 + 4}
-                textAnchor="middle" dominantBaseline="central"
-                fontSize="12" fill="#64748b"
-                fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-                fontWeight="700" letterSpacing="1.5">
-                {ROUND_LABELS[i].toUpperCase()}
-              </text>
-            ))}
-
-            {/* Round labels right — Gm1 on far right, Gm5 closest to center */}
-            {[0,1,2,3,4].map(i => (
-              <text key={`rl${i}`}
-                x={rightHalfX + (4 - i) * (COL_W + COL_GAP) + COL_W / 2}
-                y={ROUND_LABEL_H / 2 + 4}
-                textAnchor="middle" dominantBaseline="central"
-                fontSize="12" fill="#64748b"
-                fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-                fontWeight="700" letterSpacing="1.5">
-                {ROUND_LABELS[i].toUpperCase()}
-              </text>
-            ))}
-
-            {/* Final label */}
-            <text x={HALF_W + CENTER_W / 2} y={ROUND_LABEL_H / 2 + 4}
-              textAnchor="middle" dominantBaseline="central"
-              fontSize="12" fill="#f59e0b"
-              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-              fontWeight="800" letterSpacing="1.5">
-              {ROUND_LABELS[5].toUpperCase()} — FINAL
-            </text>
-
-            {/* Left half */}
-            <BracketHalf
-              startPos={1} side="left"
-              colsX={leftColsX}
-              posX={0}
-              posAnchor="end"
-              yOffset={ROUND_LABEL_H}
-              entryByPos={entryByPos}
-              aliveAfter={aliveAfter}
-              winnersOf={winnersOf}
-              getScore={getScore}
-              isHdcp={isHdcp}
-            />
-
-            {/* Right half */}
-            <BracketHalf
-              startPos={33} side="right"
-              colsX={rightHalfX}
-              posX={rightHalfX + 5 * (COL_W + COL_GAP) - COL_GAP + POS_GAP}
-              posAnchor="start"
-              yOffset={ROUND_LABEL_H}
-              entryByPos={entryByPos}
-              aliveAfter={aliveAfter}
-              winnersOf={winnersOf}
-              getScore={getScore}
-              isHdcp={isHdcp}
-            />
-
-            {/* Championship */}
-            <Finals
-              leftFinalists={leftFinalists}
-              rightFinalists={rightFinalists}
-              entryByPos={entryByPos}
-              finalWinners={finalWinners}
-              champion={champion}
-              xCenter={HALF_W + CENTER_W / 2}
-              yOffset={ROUND_LABEL_H}
-              getScore={getScore}
-              isHdcp={isHdcp}
-            />
-          </svg>
-        </div>
-        <style>{`@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.3}}`}</style>
-      </div>
-    </>
-  );
-}
-
-function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByPos, aliveAfter, winnersOf, getScore, isHdcp }) {
-  const isRight = side === "right";
-  const half = Array.from({ length: 32 }, (_, i) => i + startPos);
-  const els = [];
-
-  for (let game = 1; game <= 5; game++) {
-    const groupSize = Math.pow(2, game);
-
-    // Column X:
-    // Left:  game1=col0 (leftmost),  game5=col4 (rightmost, closest to center)
-    // Right: game1=col4 (rightmost), game5=col0 (leftmost,  closest to center)
-    const colIdx = isRight ? (5 - game) : (game - 1);
-    const colX = colsX + colIdx * (COL_W + COL_GAP);
-
-    // The bracket line (vertical connector) lives in the GAP between this column
-    // and the next column (which is toward center).
-    // Left side:  next col is to the RIGHT => bracket line on RIGHT edge of cell = colX + COL_W
-    // Right side: next col is to the LEFT  => bracket line on LEFT  edge of cell = colX
-    const bracketX = isRight ? colX : colX + COL_W;
-
-    // The stub goes from the FAR edge of the cell (away from center) to bracketX.
-    // Left side:  far edge = left edge  = colX
-    // Right side: far edge = right edge = colX + COL_W
-    const stubStartX = isRight ? colX + COL_W : colX;
-
-    // The feed line goes from bracketX across the gap to the bracket line of the NEXT column.
-    // Next column's bracket line X:
-    // Left side:  next colIdx = game, nextColX = colsX + game*(COL_W+COL_GAP), bracketX = nextColX
-    // Right side: next colIdx = 5-(game+1)=4-game, nextColX = colsX+(4-game)*(COL_W+COL_GAP), bracketX = nextColX+COL_W
-    const nextColIdx = isRight ? (4 - game) : game;
-    const nextColX = colsX + nextColIdx * (COL_W + COL_GAP);
-    const feedEndX = isRight ? nextColX + COL_W : nextColX;
-
-    for (let gi = 0; gi < 32 / groupSize; gi++) {
-      const positions = half.slice(gi * groupSize, (gi + 1) * groupSize);
-
-      // Y span: based on exact pixel positions of the original game-1 slots
-      const firstIdx = positions[0] - startPos;
-      const lastIdx  = positions[positions.length - 1] - startPos;
-      const groupTopY    = yOffset + firstIdx * SLOT_SPACING;
-      const groupBotY    = yOffset + (lastIdx + 1) * SLOT_SPACING;
-      const groupCenterY = (groupTopY + groupBotY) / 2;
-
-      // Build slot list
-      let slots = [];
-      if (game === 1) {
-        const winners = winnersOf(positions, 1);
-        slots = positions.map(pos => ({
-          pos,
-          name: entryByPos[pos]?.bowler_name || "",
-          score: getScore(pos, 1),
-          status: winners.length > 0 ? (winners.includes(pos) ? "winner" : "lost") : "pending",
-        }));
-      } else {
-        const priorAlive = aliveAfter[game - 1];
-        const alive = priorAlive ? positions.filter(p => priorAlive.has(p)) : [];
-        if (alive.length === 0) continue;
-        const winners = winnersOf(alive, game);
-        slots = alive.map(pos => ({
-          pos,
-          name: entryByPos[pos]?.bowler_name || "",
-          score: getScore(pos, game),
-          status: winners.length > 0 ? (winners.includes(pos) ? "winner" : "lost") : "pending",
-        }));
-      }
-      if (slots.length === 0) continue;
-
-      // Stack slots centered on groupCenterY
-      const totalH = slots.length * SLOT_H + Math.max(0, slots.length - 1) * SLOT_GAP;
-      const stackTopY = groupCenterY - totalH / 2;
-
-      // --- BRACKET LINES (drawn behind cells) ---
-
-      // 1. Vertical line connecting midpoints of top and bottom slots
-      if (slots.length > 1) {
-        const topMidY = stackTopY + SLOT_H / 2;
-        const botMidY = stackTopY + (slots.length - 1) * (SLOT_H + SLOT_GAP) + SLOT_H / 2;
-        els.push(<line key={`vert-${game}-${gi}`}
-          x1={bracketX} y1={topMidY}
-          x2={bracketX} y2={botMidY}
-          stroke="#2a3545" strokeWidth="1.5" />);
-      }
-
-      // 2. Horizontal feed line from bracketX to next column's bracketX, at groupCenterY
-      if (game < 5) {
-        els.push(<line key={`feed-${game}-${gi}`}
-          x1={bracketX} y1={groupCenterY}
-          x2={feedEndX} y2={groupCenterY}
-          stroke="#2a3545" strokeWidth="1.5" />);
-      }
-
-      // --- SLOTS ---
-      slots.forEach((slot, si) => {
-        const slotY = stackTopY + si * (SLOT_H + SLOT_GAP);
-        const midY  = slotY + SLOT_H / 2;
-
-        // Stub: from far edge of cell to bracketX
-        els.push(<line key={`stub-${game}-${gi}-${si}`}
-          x1={stubStartX} y1={midY}
-          x2={bracketX}   y2={midY}
-          stroke={slot.status === "winner" ? "#f59e0b" : "#1e2a38"} strokeWidth="1" />);
-
-        // Cell background
-        els.push(<rect key={`bg-${game}-${gi}-${si}`}
-          x={colX} y={slotY} width={COL_W} height={SLOT_H}
-          fill={slot.status === "winner" ? "rgba(245,158,11,0.13)" : "rgba(16,20,26,0.95)"}
-          stroke={slot.status === "winner" ? "#f59e0b" : "#1e2a38"}
-          strokeWidth="0.75" rx="2" />);
-
-        // Position number (game 1 only, outside cell)
-        if (game === 1) {
-          els.push(<text key={`posn-${gi}-${si}`}
-            x={isRight ? posX + POS_W : posX + POS_W - 2}
-            y={midY}
-            textAnchor={posAnchor}
-            dominantBaseline="central"
-            fontSize="9" fill="#374151"
-            fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="700">
-            {slot.pos}
-          </text>);
-        }
-
-        // Name
-        if (slot.name) {
-          const maxChars = isHdcp ? 15 : 20;
-          const dn = slot.name.length > maxChars ? slot.name.slice(0, maxChars - 1) + "\u2026" : slot.name;
-          const nameY = isHdcp && slot.score ? slotY + SLOT_H * 0.36 : midY;
-          els.push(<text key={`name-${game}-${gi}-${si}`}
-            x={colX + 6} y={nameY}
-            dominantBaseline="central" fontSize="12"
-            fill={slot.status === "winner" ? "#f59e0b" : slot.status === "lost" ? "#2d3748" : "#cbd5e1"}
-            fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-            fontWeight={slot.status === "winner" ? "700" : "400"}
-            textDecoration={slot.status === "lost" ? "line-through" : "none"}>
-            {dn}
-          </text>);
-        }
-
-        // Score
-        if (slot.score) {
-          const { total, raw, hdcp } = slot.score;
-          const scoreY = isHdcp ? slotY + SLOT_H * 0.36 : midY;
-          els.push(<text key={`total-${game}-${gi}-${si}`}
-            x={colX + COL_W - 4} y={scoreY}
-            textAnchor="end" dominantBaseline="central"
-            fontSize="13"
-            fill={slot.status === "winner" ? "#f59e0b" : "#64748b"}
-            fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
-            {total}
-          </text>);
-          if (isHdcp && hdcp > 0) {
-            els.push(<text key={`breakdown-${game}-${gi}-${si}`}
-              x={colX + COL_W - 4} y={slotY + SLOT_H * 0.72}
-              textAnchor="end" dominantBaseline="central"
-              fontSize="8"
-              fill={slot.status === "winner" ? "rgba(245,158,11,0.55)" : "#374151"}
-              fontFamily="'Barlow Condensed',Arial Narrow,Arial">
-              {raw}+{hdcp}
-            </text>);
-          }
-        }
-      });
-    }
-  }
-
-  return <g>{els}</g>;
-}
-
 
 function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, yOffset, getScore, isHdcp }) {
   const slotW = CENTER_W - 16;
