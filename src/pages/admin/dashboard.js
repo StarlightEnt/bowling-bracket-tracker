@@ -18,7 +18,7 @@ export default function AdminDashboard() {
   return (
     <Layout isAdmin>
       <h1 className="page-title">Admin <span>Dashboard</span></h1>
-      <p className="page-subtitle">Manage your bowling bracket tournament</p>
+      <p className="page-subtitle">Manage your bowling MegaBracket tournament</p>
 
       {/* Stats row */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
@@ -62,14 +62,14 @@ export default function AdminDashboard() {
           href="/admin/scores"
           icon="📊"
           title="Import Scores"
-          description="Upload game CSV to update scores and advance brackets"
+          description="Upload game CSV to update scores and advance MegaBrackets"
           color="var(--color-handicap)"
         />
         <ActionCard
           href="/admin/prizes"
           icon="💰"
           title="Prize Config"
-          description="Set prize amounts for each bracket"
+          description="Set prize amounts for each MegaBracket"
           color="#10b981"
         />
         <ActionCard
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
 function ActionCard({ href, icon, title, description, color }) {
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
-      <div className="card" style={{ cursor: "pointer", transition: "border-color 0.15s, transform 0.15s" }}
+      <div className="card" style={{ cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", height: "160px", display: "flex", flexDirection: "column", justifyContent: "center" }}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = color; e.currentTarget.style.transform = "translateY(-2px)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.transform = "none"; }}
       >
