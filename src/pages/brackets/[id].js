@@ -163,7 +163,6 @@ export default function BracketPage() {
               </span>
             )}
           </div>
-          </div>
           <div style={{ fontSize: "0.65rem", color: "#475569" }}>
             {entries.length}/64 entries{lastUpdate ? `  ·  updated ${lastUpdate.toLocaleTimeString()}` : ""}
           </div>
