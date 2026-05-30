@@ -545,20 +545,21 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       {/* Tournament logo — absolute center of bracket */}
       {logoUrl && (() => {
         const logoSize = 150;
-        const lx = xCenter - logoSize / 2;
+        const logoW = 130;
+        const lx = xCenter - logoW / 2;
         const ly = midY - logoSize / 2;
         return (
           <g>
             <defs>
               <clipPath id="logo-clip">
-                <rect x={lx} y={ly} width={logoSize} height={logoSize} />
+                <rect x={lx} y={ly} width={logoW} height={logoSize} />
               </clipPath>
             </defs>
             <image
               href={logoUrl}
               x={lx}
               y={ly}
-              width={logoSize}
+              width={logoW}
               height={logoSize}
               preserveAspectRatio="xMidYMid meet"
               clipPath="url(#logo-clip)"
