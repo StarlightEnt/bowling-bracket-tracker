@@ -318,15 +318,15 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
         els.push(<line key={`ostub-${game}-${hi}`}
           x1={outerStubX} y1={centerY}
           x2={isRight ? outerStubX + STUB_LEN : outerStubX - STUB_LEN} y2={centerY}
-          stroke={hasContent ? filledBorder : emptyBorder} strokeWidth="1" />);
+          stroke={hasContent ? filledBorder : '#2a4060'} strokeWidth="1" />);
       }
 
-      // INNER stub (toward center) — not on game 5 inner edge (those connect to finals)
-      if (game < NUM_COLS) {
+      // INNER stub (toward center) — always draw, game 5 connects to finals
+      if (true) {
         els.push(<line key={`istub-${game}-${hi}`}
           x1={innerStubX} y1={centerY}
           x2={isRight ? innerStubX - STUB_LEN : innerStubX + STUB_LEN} y2={centerY}
-          stroke={hasContent ? filledBorder : emptyBorder} strokeWidth="1" />);
+          stroke={hasContent ? filledBorder : '#2a4060'} strokeWidth="1" />);
       }
 
       // Position number outside bracket (game 1 only)
@@ -393,7 +393,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
       els.push(<line key={`vline-${game}-${pi}`}
         x1={vertX} y1={topCenterY}
         x2={vertX} y2={botCenterY}
-        stroke="#1e2a38" strokeWidth="1.5" />);
+        stroke="#3d5068" strokeWidth="1.5" />);
 
       // Horizontal feed line from midpoint to next column's outer stub end
       if (game < NUM_COLS) {
@@ -405,7 +405,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
         els.push(<line key={`hline-${game}-${pi}`}
           x1={vertX} y1={feedY}
           x2={nextOuterStubEndX} y2={feedY}
-          stroke="#1e2a38" strokeWidth="1.5" />);
+          stroke="#3d5068" strokeWidth="1.5" />);
       }
     }
   }
@@ -416,31 +416,51 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
 function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp }) {
   const slotW = CENTER_W - 20;
   const slotX = xCenter - slotW / 2;
-  const midY = ROUND_LABEL_H + BRACKET_H / 2;
-  const trophySpace = 60;
-  const slotGap = 12;
+  // Left finalist slot is centered in the top half (slots 0-15 of the bracket)
+  // Right finalist slot is centered in the bottom half (slots 16-31)
+  const leftSlotCenterY = ROUND_LABEL_H + (BRACKET_H / 4);
+  const rightSlotCenterY = ROUND_LABEL_H + (BRACKET_H * 3 / 4);
+  const leftSlotY = leftSlotCenterY - SLOT_H / 2;
+  const rightSlotY = rightSlotCenterY - SLOT_H / 2;
 
-  const renderSlot = (pos, y) => {
-    const entry = entryByPos[pos];
-    const isWinner = finalWinners.includes(pos) || champion === pos;
-    const isLost = (finalWinners.length > 0 || champion) && !isWinner;
-    const score = getScore(pos, 6);
-    const name = entry?.bowler_name || "—";
+  // Game 6 vertical line connects the two finalist slots
+  const vertLineX = xCenter;
+
+  const renderSlot = (pos, y, centerY, isLeftSlot) => {
+    const hasContent = pos !== null;
+    const entry = hasContent ? entryByPos[pos] : null;
+    const isWinner = hasContent && (finalWinners.includes(pos) || champion === pos);
+    const isLost = hasContent && (finalWinners.length > 0 || champion) && !isWinner;
+    const score = hasContent ? getScore(pos, 6) : null;
+    const name = entry?.bowler_name || "";
+    const borderColor = isWinner ? "#f59e0b" : hasContent ? "#2a3d52" : "#3d5068";
 
     return (
-      <g key={`final-${pos}`}>
+      <g key={`final-${isLeftSlot ? "L" : "R"}`}>
+        {/* Cell */}
         <rect x={slotX} y={y} width={slotW} height={SLOT_H}
-          fill={isWinner ? "rgba(245,158,11,0.12)" : "rgba(16,20,26,0.95)"}
-          stroke={isWinner ? "#f59e0b" : "#2a3d52"}
+          fill={isWinner ? "rgba(245,158,11,0.12)" : hasContent ? "rgba(16,20,26,0.95)" : "rgba(10,14,20,0.5)"}
+          stroke={borderColor}
           strokeWidth={isWinner ? "1.5" : "0.75"} rx="2" />
-        <text x={slotX + 5} y={y + (isHdcp && score ? SLOT_H * 0.35 : SLOT_H / 2)}
-          dominantBaseline="central" fontSize="11"
-          fill={isWinner ? "#f59e0b" : isLost ? "#2d3748" : "#cbd5e1"}
-          fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-          fontWeight={isWinner ? "700" : "400"}
-          textDecoration={isLost ? "line-through" : "none"}>
-          {name.slice(0, 14)}
-        </text>
+        {/* Single stub — left slot has right stub only, right slot has left stub only */}
+        {isLeftSlot ? (
+          <line x1={slotX + slotW} y1={centerY} x2={slotX + slotW + STUB_LEN} y2={centerY}
+            stroke={borderColor} strokeWidth="1" />
+        ) : (
+          <line x1={slotX} y1={centerY} x2={slotX - STUB_LEN} y2={centerY}
+            stroke={borderColor} strokeWidth="1" />
+        )}
+        {/* Content */}
+        {hasContent && name && (
+          <text x={slotX + 5} y={y + (isHdcp && score ? SLOT_H * 0.35 : SLOT_H / 2)}
+            dominantBaseline="central" fontSize="11"
+            fill={isWinner ? "#f59e0b" : isLost ? "#2d3748" : "#cbd5e1"}
+            fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+            fontWeight={isWinner ? "700" : "400"}
+            textDecoration={isLost ? "line-through" : "none"}>
+            {name.slice(0, 14)}
+          </text>
+        )}
         {score && <>
           <text x={slotX + slotW - 4} y={y + (isHdcp ? SLOT_H * 0.35 : SLOT_H / 2)}
             textAnchor="end" dominantBaseline="central"
@@ -461,17 +481,28 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     );
   };
 
-  const leftSlots = leftFinalists.map((pos, i) =>
-    renderSlot(pos, midY - trophySpace / 2 - slotGap - (leftFinalists.length - i) * (SLOT_H + slotGap))
-  );
-  const rightSlots = rightFinalists.map((pos, i) =>
-    renderSlot(pos, midY + trophySpace / 2 + slotGap + i * (SLOT_H + slotGap))
-  );
+  // Determine which positions are in the finals
+  const leftPos = leftFinalists.length === 1 ? leftFinalists[0] : null;
+  const rightPos = rightFinalists.length === 1 ? rightFinalists[0] : null;
+  const midY = ROUND_LABEL_H + BRACKET_H / 2;
 
   return (
     <g>
-      {leftSlots}
-      {rightSlots}
+      {/* Vertical line connecting the two finalist stubs */}
+      <line x1={vertLineX} y1={leftSlotCenterY} x2={vertLineX} y2={rightSlotCenterY}
+        stroke="#3d5068" strokeWidth="1.5" />
+
+      {/* Horizontal lines from vertical to each slot's stub end */}
+      <line x1={vertLineX} y1={leftSlotCenterY} x2={slotX + slotW + STUB_LEN} y2={leftSlotCenterY}
+        stroke="#3d5068" strokeWidth="1.5" />
+      <line x1={vertLineX} y1={rightSlotCenterY} x2={slotX - STUB_LEN} y2={rightSlotCenterY}
+        stroke="#3d5068" strokeWidth="1.5" />
+
+      {/* Finalist slots */}
+      {renderSlot(leftPos, leftSlotY, leftSlotCenterY, true)}
+      {renderSlot(rightPos, rightSlotY, rightSlotCenterY, false)}
+
+      {/* Trophy and champion */}
       <text x={xCenter} y={midY - 14} textAnchor="middle" fontSize="26" dominantBaseline="central">🏆</text>
       {champion ? (<>
         <text x={xCenter} y={midY + 8} textAnchor="middle"
@@ -491,6 +522,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     </g>
   );
 }
+
 
 function Screen({ color, children }) {
   return (
