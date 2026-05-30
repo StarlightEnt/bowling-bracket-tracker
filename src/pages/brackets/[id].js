@@ -542,35 +542,32 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       {/* Right finalist cell with right stub */}
       {renderFinalistCell(rightPos, rightCellX, rightCenterY, "right")}
 
-      {/* Trophy */}
-      <text x={xCenter} y={midY - 14} textAnchor="middle" fontSize="26" dominantBaseline="central">🏆</text>
-      {champion ? (<>
-        <text x={xCenter} y={midY + 8} textAnchor="middle"
-          fontSize="9" fill={primaryColor}
-          fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-          fontWeight="800" letterSpacing="2">CHAMPION</text>
-        <text x={xCenter} y={midY + 23} textAnchor="middle"
-          fontSize="13" fill={primaryColor}
-          fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
-          {entryByPos[champion]?.bowler_name?.slice(0, 16)}
-        </text>
-      </>) : (
-        <text x={xCenter} y={midY + 12} textAnchor="middle"
-          fontSize="9" fill="#374151"
-          fontFamily="'Barlow Condensed',Arial Narrow,Arial">awaiting finalists</text>
-      )}
-
-      {/* Tournament logo — centered below trophy, top aligned to midpoint between Q2 Gm5 and Gm4 */}
+      {/* Tournament logo — absolute center of bracket */}
       {logoUrl && (
         <image
           href={logoUrl}
-          x={xCenter - 60}
-          y={864}
-          width={120}
-          height={120}
+          x={xCenter - 75}
+          y={midY - 75}
+          width={150}
+          height={150}
           preserveAspectRatio="xMidYMid meet"
           opacity="0.9"
         />
+      )}
+
+      {/* Champion name — below logo once known */}
+      {champion && (
+        <>
+          <text x={xCenter} y={midY + 85} textAnchor="middle"
+            fontSize="9" fill={primaryColor}
+            fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+            fontWeight="800" letterSpacing="2">CHAMPION</text>
+          <text x={xCenter} y={midY + 100} textAnchor="middle"
+            fontSize="13" fill={primaryColor}
+            fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
+            {entryByPos[champion]?.bowler_name?.slice(0, 16)}
+          </text>
+        </>
       )}
     </g>
   );
