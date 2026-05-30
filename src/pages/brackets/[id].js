@@ -242,6 +242,7 @@ export default function BracketPage() {
               getScore={getScore}
               isHdcp={isHdcp}
               primaryColor={primaryColor}
+              logoUrl={settings.tournament_logo_url}
             />
           </svg>
         </div>
@@ -443,7 +444,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
   return <g>{els}</g>;
 }
 
-function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp, primaryColor = "#f59e0b" }) {
+function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl }) {
   // Finalist cell dimensions - same as rest of bracket
   const slotW = COL_W;
   const slotH = SLOT_H;
@@ -557,6 +558,19 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
         <text x={xCenter} y={midY + 12} textAnchor="middle"
           fontSize="9" fill="#374151"
           fontFamily="'Barlow Condensed',Arial Narrow,Arial">awaiting finalists</text>
+      )}
+
+      {/* Tournament logo watermark in lower center */}
+      {logoUrl && (
+        <image
+          href={logoUrl}
+          x={xCenter - 75}
+          y={midY + 45}
+          width={150}
+          height={150}
+          preserveAspectRatio="xMidYMid meet"
+          opacity="0.85"
+        />
       )}
     </g>
   );
