@@ -107,7 +107,7 @@ export default function BracketPage() {
   const finalWinners = winnersOf(allFinalists, 6);
   const champion = aliveAfter[6]?.size === 1 ? [...aliveAfter[6]][0] : null;
 
-  const svgW = DISPLAY_W - PADDING * 2;
+  const svgW = DISPLAY_W;
   const svgH = USABLE_H + 4;
 
   return (
@@ -545,7 +545,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       {/* Tournament logo — absolute center of bracket */}
       {logoUrl && (() => {
         const logoSize = 150;
-        const logoW = 130;
+        const logoW = logoSize;
         const lx = xCenter - logoW / 2;
         const ly = midY - logoSize / 2;
         return (
