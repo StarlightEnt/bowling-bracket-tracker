@@ -414,19 +414,43 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
 }
 
 function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp }) {
-  const slotW = CENTER_W - 20;
-  const slotX = xCenter - slotW / 2;
-  // Left finalist slot is centered in the top half (slots 0-15 of the bracket)
-  // Right finalist slot is centered in the bottom half (slots 16-31)
-  const leftSlotCenterY = ROUND_LABEL_H + (BRACKET_H / 4);
-  const rightSlotCenterY = ROUND_LABEL_H + (BRACKET_H * 3 / 4);
-  const leftSlotY = leftSlotCenterY - SLOT_H / 2;
-  const rightSlotY = rightSlotCenterY - SLOT_H / 2;
+  // Finalist cell dimensions - same as rest of bracket
+  const slotW = COL_W;
+  const slotH = SLOT_H;
 
-  // Game 6 vertical line connects the two finalist slots
-  const vertLineX = xCenter;
+  // Left finalist cell:
+  // - Positioned at the same Y as Game 4 cell covering slots 8-15 (Q1 second group of 8)
+  // - This is vertically between the two Game 5 participants on the left side
+  const leftCenterY = (slotCenterY(8) + slotCenterY(15)) / 2;
+  const leftSlotY = leftCenterY - slotH / 2;
 
-  const renderSlot = (pos, y, centerY, isLeftSlot) => {
+  // Right finalist cell:
+  // - Positioned at the same Y as Game 4 cell covering slots 16-23 (right half, Q4 first group of 8)
+  // - This is vertically between the two Game 5 participants on the right side
+  const rightCenterY = (slotCenterY(16) + slotCenterY(23)) / 2;
+  const rightSlotY = rightCenterY - slotH / 2;
+
+  // Left finalist cell X: just to the right of Game 5 inner stub
+  // Left half Game 5 col is colIdx=4: colX = leftColsX + 4*(COL_W+COL_GAP)
+  const leftColsX = POS_W + POS_GAP;
+  const leftG5colX = leftColsX + 4 * (COL_W + COL_GAP);
+  const leftG5rightEdge = leftG5colX + COL_W;  // Game 5 right edge = inner stub base
+  const leftCellX = leftG5rightEdge + COL_GAP; // finalist cell starts after the gap
+
+  // Right finalist cell X: just to the left of Game 5 inner stub
+  const rightColsX = HALF_W + CENTER_W + COL_GAP;
+  const rightG5colX = rightColsX; // colIdx=0 for right side game 5 (innermost)
+  const rightG5leftEdge = rightG5colX;
+  const rightCellX = rightG5leftEdge - COL_GAP - slotW; // finalist cell ends before the gap
+
+  // Game 5 vertical line X positions (inner stub ends)
+  const leftVertX = leftG5rightEdge + STUB_LEN;   // end of left G5 inner stub
+  const rightVertX = rightG5leftEdge - STUB_LEN;  // end of right G5 inner stub
+
+  const leftPos = leftFinalists.length === 1 ? leftFinalists[0] : null;
+  const rightPos = rightFinalists.length === 1 ? rightFinalists[0] : null;
+
+  const renderFinalistCell = (pos, cellX, centerY, stubSide) => {
     const hasContent = pos !== null;
     const entry = hasContent ? entryByPos[pos] : null;
     const isWinner = hasContent && (finalWinners.includes(pos) || champion === pos);
@@ -434,25 +458,22 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     const score = hasContent ? getScore(pos, 6) : null;
     const name = entry?.bowler_name || "";
     const borderColor = isWinner ? "#f59e0b" : hasContent ? "#2a3d52" : "#3d5068";
+    const cellY = centerY - slotH / 2;
+
+    // Stub: left side has stub on LEFT, right side has stub on RIGHT
+    const stubX1 = stubSide === "left" ? cellX : cellX + slotW;
+    const stubX2 = stubSide === "left" ? cellX - STUB_LEN : cellX + slotW + STUB_LEN;
 
     return (
-      <g key={`final-${isLeftSlot ? "L" : "R"}`}>
-        {/* Cell */}
-        <rect x={slotX} y={y} width={slotW} height={SLOT_H}
+      <g key={`final-${stubSide}`}>
+        <rect x={cellX} y={cellY} width={slotW} height={slotH}
           fill={isWinner ? "rgba(245,158,11,0.12)" : hasContent ? "rgba(16,20,26,0.95)" : "rgba(10,14,20,0.5)"}
-          stroke={borderColor}
-          strokeWidth={isWinner ? "1.5" : "0.75"} rx="2" />
-        {/* Single stub — left slot has right stub only, right slot has left stub only */}
-        {isLeftSlot ? (
-          <line x1={slotX + slotW} y1={centerY} x2={slotX + slotW + STUB_LEN} y2={centerY}
-            stroke={borderColor} strokeWidth="1" />
-        ) : (
-          <line x1={slotX} y1={centerY} x2={slotX - STUB_LEN} y2={centerY}
-            stroke={borderColor} strokeWidth="1" />
-        )}
-        {/* Content */}
+          stroke={borderColor} strokeWidth={isWinner ? "1.5" : "0.75"} rx="2" />
+        {/* Single stub connecting to Game 5 vertical line */}
+        <line x1={stubX1} y1={centerY} x2={stubX2} y2={centerY}
+          stroke={borderColor} strokeWidth="1" />
         {hasContent && name && (
-          <text x={slotX + 5} y={y + (isHdcp && score ? SLOT_H * 0.35 : SLOT_H / 2)}
+          <text x={cellX + 5} y={cellY + (isHdcp && score ? slotH * 0.35 : slotH / 2)}
             dominantBaseline="central" fontSize="11"
             fill={isWinner ? "#f59e0b" : isLost ? "#2d3748" : "#cbd5e1"}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial"
@@ -462,14 +483,14 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
           </text>
         )}
         {score && <>
-          <text x={slotX + slotW - 4} y={y + (isHdcp ? SLOT_H * 0.35 : SLOT_H / 2)}
+          <text x={cellX + slotW - 4} y={cellY + (isHdcp ? slotH * 0.35 : slotH / 2)}
             textAnchor="end" dominantBaseline="central"
             fontSize="12" fill={isWinner ? "#f59e0b" : "#64748b"}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
             {score.total}
           </text>
           {isHdcp && score.hdcp > 0 && (
-            <text x={slotX + slotW - 4} y={y + SLOT_H * 0.72}
+            <text x={cellX + slotW - 4} y={cellY + slotH * 0.72}
               textAnchor="end" dominantBaseline="central"
               fontSize="8" fill={isWinner ? "rgba(245,158,11,0.5)" : "#2d3748"}
               fontFamily="'Barlow Condensed',Arial Narrow,Arial">
@@ -481,28 +502,16 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     );
   };
 
-  // Determine which positions are in the finals
-  const leftPos = leftFinalists.length === 1 ? leftFinalists[0] : null;
-  const rightPos = rightFinalists.length === 1 ? rightFinalists[0] : null;
   const midY = ROUND_LABEL_H + BRACKET_H / 2;
 
   return (
     <g>
-      {/* Vertical line connecting the two finalist stubs */}
-      <line x1={vertLineX} y1={leftSlotCenterY} x2={vertLineX} y2={rightSlotCenterY}
-        stroke="#3d5068" strokeWidth="1.5" />
+      {/* Left finalist cell with left stub */}
+      {renderFinalistCell(leftPos, leftCellX, leftCenterY, "left")}
+      {/* Right finalist cell with right stub */}
+      {renderFinalistCell(rightPos, rightCellX, rightCenterY, "right")}
 
-      {/* Horizontal lines from vertical to each slot's stub end */}
-      <line x1={vertLineX} y1={leftSlotCenterY} x2={slotX + slotW + STUB_LEN} y2={leftSlotCenterY}
-        stroke="#3d5068" strokeWidth="1.5" />
-      <line x1={vertLineX} y1={rightSlotCenterY} x2={slotX - STUB_LEN} y2={rightSlotCenterY}
-        stroke="#3d5068" strokeWidth="1.5" />
-
-      {/* Finalist slots */}
-      {renderSlot(leftPos, leftSlotY, leftSlotCenterY, true)}
-      {renderSlot(rightPos, rightSlotY, rightSlotCenterY, false)}
-
-      {/* Trophy and champion */}
+      {/* Trophy */}
       <text x={xCenter} y={midY - 14} textAnchor="middle" fontSize="26" dominantBaseline="central">🏆</text>
       {champion ? (<>
         <text x={xCenter} y={midY + 8} textAnchor="middle"
