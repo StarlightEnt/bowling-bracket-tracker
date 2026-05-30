@@ -34,6 +34,27 @@ export default function AdminScores() {
     fetch("/api/public/brackets").then((r) => r.json()).then((d) => setBrackets(d.brackets || []));
   };
 
+  const [deleteResult, setDeleteResult] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const maxGame = brackets.reduce((m, b) => Math.max(m, b.current_game || 0), 0);
+
+  const handleDelete = async (game) => {
+    const label = game === "all" ? "ALL scores and results" : `Game ${game} scores`;
+    if (!confirm(`Delete ${label}? This cannot be undone.`)) return;
+    setDeleting(true);
+    setDeleteResult(null);
+    const res = await fetch("/api/admin/delete-scores", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ game_number: game }),
+    });
+    const data = await res.json();
+    setDeleteResult({ ...data, ok: res.ok });
+    setDeleting(false);
+    fetch("/api/public/brackets").then((r) => r.json()).then((d) => setBrackets(d.brackets || []));
+  };
+
   const activeBrackets = brackets.filter((b) => b.status === "active");
 
   return (
@@ -197,6 +218,59 @@ export default function AdminScores() {
               ))}
             </div>
           </div>
+        </div>
+        {/* Delete / Reset Scores */}
+        <div className="card" style={{ marginTop: "1.5rem", borderColor: "rgba(239,68,68,0.3)" }}>
+          <div className="card-title" style={{ color: "#ef4444" }}>⚠ Delete Scores</div>
+          <p style={{ fontSize: "0.85rem", color: "var(--color-text-muted)", marginBottom: "1rem" }}>
+            Remove scores in reverse order. You can only delete the most recently uploaded game.
+            Use <strong>Full Reset</strong> to clear everything at once.
+          </p>
+
+          <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", alignItems: "center" }}>
+            {[6,5,4,3,2,1].map(g => {
+              const hasScore = maxGame >= g;
+              const canDelete = maxGame === g;
+              return (
+                <button key={g}
+                  className="btn"
+                  onClick={() => handleDelete(g)}
+                  disabled={!hasScore || !canDelete || deleting}
+                  style={{
+                    background: canDelete ? "rgba(239,68,68,0.15)" : "transparent",
+                    border: `1px solid ${hasScore ? (canDelete ? "#ef4444" : "#475569") : "#1e293b"}`,
+                    color: hasScore ? (canDelete ? "#ef4444" : "#64748b") : "#1e293b",
+                    cursor: canDelete ? "pointer" : "not-allowed",
+                    opacity: hasScore ? 1 : 0.4,
+                  }}
+                >
+                  Delete Gm {g}
+                </button>
+              );
+            })}
+
+            <div style={{ borderLeft: "1px solid #334155", paddingLeft: "0.75rem" }}>
+              <button
+                className="btn"
+                onClick={() => handleDelete("all")}
+                disabled={deleting || maxGame === 0}
+                style={{
+                  background: "rgba(239,68,68,0.2)",
+                  border: "1px solid #ef4444",
+                  color: "#ef4444",
+                  fontWeight: 700,
+                }}
+              >
+                {deleting ? "Deleting..." : "⚠ Full Reset"}
+              </button>
+            </div>
+          </div>
+
+          {deleteResult && (
+            <div className={`alert ${deleteResult.ok ? "alert-success" : "alert-error"}`} style={{ marginTop: "1rem" }}>
+              {deleteResult.ok ? `✓ ${deleteResult.message}` : `✗ ${deleteResult.error}`}
+            </div>
+          )}
         </div>
       </div>
     </Layout>
