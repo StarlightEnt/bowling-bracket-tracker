@@ -128,3 +128,60 @@ src/utils/
 - **Org:** SFGGCI / SFGGC
 - **Logo:** SFGGCI_logo.jpg (518×579px portrait)
 - **Primary color:** #f59e0b (amber/gold)
+
+## Fresh Installation Guide
+For anyone setting up this app from scratch:
+
+### Prerequisites
+- Node.js 18+
+- Neon PostgreSQL account (console.neon.tech)
+- Vercel account
+
+### Steps
+1. **Clone the repo**
+   ```powershell
+   git clone https://github.com/StarlightEnt/bowling-bracket-tracker.git
+   cd bowling-bracket-tracker
+   npm install
+   ```
+
+2. **Set up Neon database**
+   - Create a new project at console.neon.tech
+   - Copy the connection string
+
+3. **Generate admin password hash**
+   ```powershell
+   Set-Content -Path "makehash.js" -Value "const b = require('bcryptjs'); b.hash('yourpassword', 10).then(h => { require('fs').writeFileSync('newhash.txt', h); console.log(h); });" -Encoding ASCII
+   node makehash.js
+   type newhash.txt
+   ```
+   Convert the hash from `$2b$10$xxx` to `2b:10:xxx` format (replace first two `$` with nothing, colons replace remaining `$`).
+
+4. **Create start-dev.ps1** (gitignored)
+   ```powershell
+   $env:ADMIN_PASSWORD_HASH = '2b:10:yourhashere'
+   $env:ADMIN_SESSION_SECRET = 'your-random-hex-string'
+   $env:DATABASE_URL = 'postgresql://...'
+   npm run dev
+   ```
+   Generate session secret with:
+   ```powershell
+   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+   ```
+
+5. **Initialize the database**
+   ```powershell
+   .\start-dev.ps1  # starts dev server which loads env vars
+   # In a new terminal:
+   node create-tables.js
+   ```
+
+6. **Set Vercel environment variables**
+   - `ADMIN_PASSWORD_HASH` = `2b:10:xxx` (colon-encoded, no $ prefix)
+   - `ADMIN_SESSION_SECRET` = random hex string
+   - `DATABASE_URL` = Neon connection string
+
+7. **Deploy**
+   ```powershell
+   git push  # Vercel auto-deploys on push
+   ```
