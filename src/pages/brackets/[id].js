@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import { useSettings } from "../../utils/useSettings.js";
 
 const ROUND_LABELS = ["Gm 1", "Gm 2", "Gm 3", "Gm 4", "Gm 5", "Gm 6"];
 const TOTAL_GAMES = 6;
@@ -38,6 +39,7 @@ export default function BracketPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const { settings } = useSettings();
 
   const fetchData = useCallback(async () => {
     if (!id) return;
@@ -57,6 +59,7 @@ export default function BracketPage() {
 
   const { bracket, entries, matchups } = data;
   const isHdcp = bracket.bracket_type === "handicap";
+  const primaryColor = settings.primary_color || "#f59e0b";
 
   const entryByPos = {};
   for (const e of entries) entryByPos[e.position] = e;
@@ -117,12 +120,23 @@ export default function BracketPage() {
         <div style={{
           height: HEADER_H, flexShrink: 0, display: "flex", alignItems: "center",
           justifyContent: "space-between", padding: "0 1rem",
-          background: "#111418", borderBottom: "2px solid #f59e0b",
+          background: "#111418", borderBottom: `2px solid ${settings.primary_color || "#f59e0b"}`,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "1.5rem", fontWeight: 800, color: "#f59e0b", letterSpacing: "0.05em", textTransform: "uppercase" }}>
-              🎳 {bracket.name}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+              {settings.tournament_logo_url ? (
+                <img src={settings.tournament_logo_url} alt="" style={{ height: 30, maxWidth: 120, objectFit: "contain" }} />
+              ) : (
+                <span style={{ fontSize: "1.2rem" }}>🎳</span>
+              )}
+              <span style={{ fontSize: "1.1rem", fontWeight: 800, color: settings.primary_color || "#f59e0b", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                {settings.tournament_name || "Bracket Tracker"}
+              </span>
+              <span style={{ fontSize: "0.8rem", color: "#64748b" }}>·</span>
+              <span style={{ fontSize: "1.5rem", fontWeight: 800, color: settings.primary_color || "#f59e0b", letterSpacing: "0.05em", textTransform: "uppercase" }}>
+                {bracket.name}
+              </span>
+            </div>
             <span style={{
               fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
               padding: "0.2rem 0.5rem", borderRadius: "3px",
@@ -172,7 +186,7 @@ export default function BracketPage() {
             ))}
             <text x={HALF_W + CENTER_W / 2} y={ROUND_LABEL_H / 2 + 2}
               textAnchor="middle" dominantBaseline="central"
-              fontSize="11" fill="#f59e0b"
+              fontSize="11" fill={primaryColor}
               fontFamily="'Barlow Condensed',Arial Narrow,Arial"
               fontWeight="800" letterSpacing="1.5">
               {ROUND_LABELS[5].toUpperCase()} — FINAL
@@ -212,6 +226,7 @@ export default function BracketPage() {
               xCenter={HALF_W + CENTER_W / 2}
               getScore={getScore}
               isHdcp={isHdcp}
+              primaryColor={primaryColor}
             />
           </svg>
         </div>
@@ -298,7 +313,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
       }
 
       const hasContent = pos !== null && name !== "";
-      const winnerColor = "#f59e0b";
+      const winnerColor = primaryColor;
       const lostColor = "#2d3748";
       const pendingColor = "#cbd5e1";
       const emptyBorder = "#3d5068";
@@ -413,7 +428,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
   return <g>{els}</g>;
 }
 
-function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp }) {
+function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp, primaryColor = "#f59e0b" }) {
   // Finalist cell dimensions - same as rest of bracket
   const slotW = COL_W;
   const slotH = SLOT_H;
@@ -475,7 +490,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
         {hasContent && name && (
           <text x={cellX + 5} y={cellY + (isHdcp && score ? slotH * 0.35 : slotH / 2)}
             dominantBaseline="central" fontSize="11"
-            fill={isWinner ? "#f59e0b" : isLost ? "#2d3748" : "#cbd5e1"}
+            fill={isWinner ? primaryColor : isLost ? "#2d3748" : "#cbd5e1"}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial"
             fontWeight={isWinner ? "700" : "400"}
             textDecoration={isLost ? "line-through" : "none"}>
@@ -485,14 +500,14 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
         {score && <>
           <text x={cellX + slotW - 4} y={cellY + (isHdcp ? slotH * 0.35 : slotH / 2)}
             textAnchor="end" dominantBaseline="central"
-            fontSize="12" fill={isWinner ? "#f59e0b" : "#64748b"}
+            fontSize="12" fill={isWinner ? primaryColor : "#64748b"}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
             {score.total}
           </text>
           {isHdcp && score.hdcp > 0 && (
             <text x={cellX + slotW - 4} y={cellY + slotH * 0.72}
               textAnchor="end" dominantBaseline="central"
-              fontSize="8" fill={isWinner ? "rgba(245,158,11,0.5)" : "#2d3748"}
+              fontSize="8" fill={isWinner ? `${primaryColor}80` : "#2d3748"}
               fontFamily="'Barlow Condensed',Arial Narrow,Arial">
               {score.raw}+{score.hdcp}
             </text>
@@ -515,11 +530,11 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       <text x={xCenter} y={midY - 14} textAnchor="middle" fontSize="26" dominantBaseline="central">🏆</text>
       {champion ? (<>
         <text x={xCenter} y={midY + 8} textAnchor="middle"
-          fontSize="9" fill="#f59e0b"
+          fontSize="9" fill={primaryColor}
           fontFamily="'Barlow Condensed',Arial Narrow,Arial"
           fontWeight="800" letterSpacing="2">CHAMPION</text>
         <text x={xCenter} y={midY + 23} textAnchor="middle"
-          fontSize="13" fill="#f59e0b"
+          fontSize="13" fill={primaryColor}
           fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
           {entryByPos[champion]?.bowler_name?.slice(0, 16)}
         </text>
