@@ -202,6 +202,7 @@ export default function BracketPage() {
               winnersOf={winnersOf}
               getScore={getScore}
               isHdcp={isHdcp}
+              primaryColor={primaryColor}
             />
 
             {/* Right half */}
@@ -236,7 +237,7 @@ export default function BracketPage() {
   );
 }
 
-function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, winnersOf, getScore, isHdcp }) {
+function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, winnersOf, getScore, isHdcp, primaryColor = "#f59e0b" }) {
   const isRight = side === "right";
   const els = [];
 
