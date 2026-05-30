@@ -215,6 +215,7 @@ export default function BracketPage() {
               winnersOf={winnersOf}
               getScore={getScore}
               isHdcp={isHdcp}
+              primaryColor={primaryColor}
             />
 
             {/* Finals */}
@@ -473,7 +474,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     const isLost = hasContent && (finalWinners.length > 0 || champion) && !isWinner;
     const score = hasContent ? getScore(pos, 6) : null;
     const name = entry?.bowler_name || "";
-    const borderColor = isWinner ? "#f59e0b" : hasContent ? "#2a3d52" : "#3d5068";
+    const borderColor = isWinner ? primaryColor : hasContent ? "#2a3d52" : "#3d5068";
     const cellY = centerY - slotH / 2;
 
     // Stub: left side has stub on LEFT, right side has stub on RIGHT
