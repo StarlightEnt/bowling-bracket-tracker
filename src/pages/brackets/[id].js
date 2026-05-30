@@ -542,7 +542,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   const logoTop = midY - logoSize / 2;    // 447
   const logoBottom = midY + logoSize / 2; // 597
   const topStart = ROUND_LABEL_H;
-  const boxW = CENTER_W - 16;
+  const boxW = Math.round((CENTER_W - 16) * 1.5);  // 50% wider than original
   const boxX = svgMid - boxW / 2;
 
   // Top 3 prizes displayed above logo
@@ -550,7 +550,6 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   const prizeBoxH = 78;  // 52 * 1.5
   const prizeGap = 12;
   const prizeBlockTop = ROUND_LABEL_H + BRACKET_H / 32;  // aligns with Gm2 slot 1-2 center
-  const boxW = Math.round((CENTER_W - 16) * 1.5);  // 50% wider
 
   // Resolve winner names by place finish
   // place 1 = champion, place 2 = finalist losers, place 3 = semi-final losers
