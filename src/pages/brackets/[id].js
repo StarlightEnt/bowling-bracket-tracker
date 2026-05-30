@@ -564,48 +564,43 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   const botBlockTop = ROUND_LABEL_H + ((24 + 0.5) + (25 + 0.5)) / 2 * (BRACKET_H / 32) - SLOT_H / 2;
 
   // Resolve place finishers:
-  // 1st  = champion
-  // 2nd  = loser of Gm6 (the other finalist)
-  // 3rd+ = losers of each prior round, sorted by highest score that game, ties split
-  //
-  // aliveAfter[g] = Set of positions still alive after game g
-  // losers at game g = aliveAfter[g-1] minus aliveAfter[g]
-
-  const winnerByPlace = {};  // place -> name string (ties: "Alice / Bob")
-
-  // Place 1
-  if (champion) {
-    winnerByPlace[1] = entryByPos[champion]?.bowler_name;
+  // Only assign place N when fewer than N players are still alive.
+  let currentGame = 0;
+  for (let g = 1; g <= 6; g++) {
+    if (aliveAfter[g] && aliveAfter[g].size > 0) currentGame = g;
   }
+  const stillAlive = currentGame > 0 ? (aliveAfter[currentGame]?.size || 0) : 64;
 
-  // Place 2 — loser of Gm6
-  if (champion && finalWinners.length > 0) {
+  const winnerByPlace = {};
+
+  // Place 1 — champion known when only 1 remains
+  if (champion) winnerByPlace[1] = entryByPos[champion]?.bowler_name;
+
+  // Place 2 — loser of Gm6, only when champion is known
+  if (champion) {
     const allFin = [...(aliveAfter[5] || new Set())];
     const runnerUp = allFin.find(p => p !== champion);
     if (runnerUp) winnerByPlace[2] = entryByPos[runnerUp]?.bowler_name;
   }
 
-  // Places 3+ — losers of Gm5, Gm4, Gm3... sorted by score descending
-  // Each round's losers fill next prize place(s)
+  // Places 3+: only assign place N when stillAlive < N
   let nextPlace = 3;
   for (let g = 5; g >= 1 && nextPlace <= prizes.length; g--) {
     const prevAlive = aliveAfter[g - 1];
     const thisAlive = aliveAfter[g];
     if (!prevAlive || !thisAlive) continue;
 
-    // Losers = were alive before this game but not after
     const losers = [...prevAlive].filter(p => !thisAlive.has(p));
     if (losers.length === 0) continue;
 
-    // Sort losers by their score in game g, descending
     const scored = losers.map(p => {
       const s = getScore(p, g);
       return { p, score: s ? s.total : 0 };
     }).sort((a, b) => b.score - a.score);
 
-    // Group by score (ties share a place)
     let i = 0;
     while (i < scored.length && nextPlace <= prizes.length) {
+      if (stillAlive >= nextPlace) { nextPlace++; i++; continue; }
       const tieScore = scored[i].score;
       const tieGroup = scored.filter(s => s.score === tieScore);
       const names = tieGroup.map(s => entryByPos[s.p]?.bowler_name).filter(Boolean);
