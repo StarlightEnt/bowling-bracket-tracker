@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Layout from "../../components/Layout/Layout";
+import { useSettings } from "../../utils/useSettings.js";
 
 export default function BracketsPage() {
   const [brackets, setBrackets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { settings } = useSettings();
 
   const fetchBrackets = async () => {
     const res = await fetch("/api/public/brackets");
@@ -36,6 +38,32 @@ export default function BracketsPage() {
           Live
         </div>
       </div>
+
+      {/* Tournament info banner */}
+      {(settings.tournament_date || settings.tournament_location || settings.tournament_welcome) && (
+        <div className="card" style={{ marginBottom: "1.5rem", background: "var(--color-surface-2)", borderColor: "var(--color-border)" }}>
+          <div style={{ display: "flex", gap: "2rem", alignItems: "center", flexWrap: "wrap" }}>
+            {settings.tournament_date && (
+              <div>
+                <div style={{ fontSize: "0.7rem", fontFamily: "var(--font-display)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Date</div>
+                <div style={{ fontWeight: 600 }}>{new Date(settings.tournament_date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</div>
+              </div>
+            )}
+            {settings.tournament_location && (
+              <div>
+                <div style={{ fontSize: "0.7rem", fontFamily: "var(--font-display)", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-text-muted)" }}>Location</div>
+                <div style={{ fontWeight: 600 }}>{settings.tournament_location}</div>
+              </div>
+            )}
+            {settings.tournament_tagline && (
+              <div style={{ color: "var(--color-text-muted)", fontStyle: "italic" }}>{settings.tournament_tagline}</div>
+            )}
+            {settings.tournament_welcome && (
+              <div style={{ flex: 1, color: "var(--color-text-muted)" }}>{settings.tournament_welcome}</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {loading && <p style={{ color: "var(--color-text-muted)" }}>Loading brackets...</p>}
 

@@ -88,3 +88,31 @@ CREATE INDEX IF NOT EXISTS idx_entries_bracket   ON entries(bracket_id);
 CREATE INDEX IF NOT EXISTS idx_entries_bowler    ON entries(bowler_id);
 CREATE INDEX IF NOT EXISTS idx_game_scores_bowler ON game_scores(bowler_id);
 CREATE INDEX IF NOT EXISTS idx_matchup_bracket_game ON matchup_results(bracket_id, game_number);
+
+-- Tournament settings (key/value store)
+CREATE TABLE IF NOT EXISTS settings (
+  key         TEXT PRIMARY KEY,
+  value       TEXT,
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Default settings
+INSERT INTO settings (key, value) VALUES
+  ('tournament_name', 'Bowling Bracket Tournament'),
+  ('tournament_tagline', ''),
+  ('tournament_date', ''),
+  ('tournament_location', ''),
+  ('tournament_welcome', ''),
+  ('tournament_logo_url', ''),
+  ('primary_color', '#f59e0b')
+ON CONFLICT (key) DO NOTHING;
+
+-- Prize amounts per bracket
+CREATE TABLE IF NOT EXISTS bracket_prizes (
+  id          SERIAL PRIMARY KEY,
+  bracket_id  INTEGER NOT NULL REFERENCES brackets(id) ON DELETE CASCADE,
+  place       INTEGER NOT NULL,  -- 1=first, 2=second, etc.
+  label       TEXT NOT NULL,     -- e.g. "1st Place"
+  amount      INTEGER NOT NULL,  -- in dollars
+  UNIQUE (bracket_id, place)
+);

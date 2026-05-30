@@ -65,6 +65,20 @@ export default function AdminDashboard() {
           description="Upload game CSV to update scores and advance brackets"
           color="var(--color-handicap)"
         />
+        <ActionCard
+          href="/admin/prizes"
+          icon="💰"
+          title="Prize Config"
+          description="Set prize amounts for each bracket"
+          color="#10b981"
+        />
+        <ActionCard
+          href="/admin/settings"
+          icon="⚙️"
+          title="Settings"
+          description="Tournament branding, logo, colors and info"
+          color="#8b5cf6"
+        />
       </div>
 
       {/* Brackets quick status */}
