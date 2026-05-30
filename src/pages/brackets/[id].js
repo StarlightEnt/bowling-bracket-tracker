@@ -247,13 +247,10 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
     const colIdx = isRight ? (5 - game) : (game - 1);
     const colX = colsX + colIdx * (COL_W + COL_GAP);
 
-    // Bracket lines connect on the OUTER side of each column
-    // Left side: bracket lines on the RIGHT of cell (outer = away from center = right)
-    // Right side: bracket lines on the LEFT of cell (outer = away from center = left)
-    // Wait — we want lines connecting TOWARD the next round (which is toward center)
-    // So: Left side next round is to the RIGHT → lines on RIGHT
-    //     Right side next round is to the LEFT → lines on LEFT
-    const bracketLineX = isRight ? colX : colX + COL_W;
+    // Bracket lines are on the side FACING the next round (toward center)
+    // Left side: next round is to the RIGHT -> bracket lines on RIGHT edge of cell
+    // Right side: next round is to the LEFT -> bracket lines on LEFT edge of cell
+    const bracketLineX = isRight ? colX : colX + COL_W;  // inner edge toward center
 
     for (let gi = 0; gi < 32 / groupSize; gi++) {
       const positions = half.slice(gi * groupSize, (gi + 1) * groupSize);
@@ -310,7 +307,7 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
       if (game < 5) {
         const nextColIdx = isRight ? (5 - (game + 1)) : game; // next game's column
         const nextColX = colsX + nextColIdx * (COL_W + COL_GAP);
-        const nextBracketX = isRight ? nextColX + COL_W : nextColX;
+        const nextBracketX = isRight ? nextColX + COL_W : nextColX;  // outer edge of next col
         els.push(<line key={`horiz-${game}-${gi}`}
           x1={bracketLineX} y1={groupCenterY}
           x2={nextBracketX} y2={groupCenterY}
@@ -324,7 +321,7 @@ function BracketHalf({ startPos, side, colsX, posX, posAnchor, yOffset, entryByP
 
         // Short stub from cell edge to bracket line X
         els.push(<line key={`stub-${game}-${gi}-${si}`}
-          x1={isRight ? colX : colX + COL_W} y1={midY}
+          x1={isRight ? colX + COL_W : colX} y1={midY}
           x2={bracketLineX} y2={midY}
           stroke={slot.status === "winner" ? "#f59e0b" : "#1e2a38"} strokeWidth="1" />);
 
