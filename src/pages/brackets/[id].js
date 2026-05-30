@@ -575,12 +575,13 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   const typeLabel = bracketType === "handicap" ? "Handicap" : "Scratch";
   const bracketNum = bracketName.replace(/\D/g, ""); // extract digits e.g. "HB1" -> "1"
   const numLabel = `Bracket ${bracketNum}`;
-  // X centers: left watermark centered between left bracket edge and logo left
-  // right watermark centered between logo right and right bracket edge
-  const logoLeft = svgMid - 75;
-  const logoRight = svgMid + 75;
-  const leftWaterX = logoLeft / 2;
-  const rightWaterX = logoRight + (DISPLAY_W - logoRight) / 2;
+  // Watermark X centers — between Gm4 right edge and logo edge on each side
+  // Left clear zone: Gm4 right (688) to logo left (svgMid-75)
+  // Right clear zone: logo right (svgMid+75) to Gm4 left (1232)
+  const leftGm4Right = POS_W + POS_GAP + 3 * (COL_W + COL_GAP) + COL_W;
+  const rightGm4Left = HALF_W + CENTER_W + COL_GAP + 1 * (COL_W + COL_GAP);
+  const leftWaterX = (leftGm4Right + (svgMid - 75)) / 2;
+  const rightWaterX = ((svgMid + 75) + rightGm4Left) / 2;
   const waterY = midY;
 
   return (
@@ -592,16 +593,16 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
 
       {/* Watermarks — type label left, bracket number right */}
       <text x={leftWaterX} y={waterY} textAnchor="middle" dominantBaseline="middle"
-        fontSize="72" fontWeight="900"
+        fontSize="52" fontWeight="900"
         fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-        fill="#ffffff" opacity="0.06" letterSpacing="2"
+        fill="#ffffff" opacity="0.07" letterSpacing="1"
         style={{ userSelect: "none" }}>
         {typeLabel}
       </text>
       <text x={rightWaterX} y={waterY} textAnchor="middle" dominantBaseline="middle"
-        fontSize="72" fontWeight="900"
+        fontSize="52" fontWeight="900"
         fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-        fill="#ffffff" opacity="0.06" letterSpacing="2"
+        fill="#ffffff" opacity="0.07" letterSpacing="1"
         style={{ userSelect: "none" }}>
         {numLabel}
       </text>
