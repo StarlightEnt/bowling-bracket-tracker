@@ -545,11 +545,17 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   const boxW = Math.round((CENTER_W - 16) * 1.5);  // 50% wider than original
   const boxX = svgMid - boxW / 2;
 
-  // Top 3 prizes displayed above logo
-  const topPrizes = prizes.slice(0, 3);
-  const prizeBoxH = 78;  // 52 * 1.5
+  // Top 2 prizes above logo, remaining below
+  const topPrizes = prizes.slice(0, 2);
+  const botPrizes = prizes.slice(2);
+  const prizeBoxH = 78;  // 52 * 1.5 — top boxes
   const prizeGap = 12;
-  const prizeBlockTop = ROUND_LABEL_H + BRACKET_H / 32;  // aligns with Gm2 slot 1-2 center
+  const prizeBlockTop = ROUND_LABEL_H + BRACKET_H / 32;
+
+  // Bottom prizes — original size, start at Gm2 winner of slots 24-25
+  const botBoxH = 52;
+  const botGap = 8;
+  const botBlockTop = ROUND_LABEL_H + (BRACKET_H / 32) * 24.5; // center of slots 24-25
 
   // Resolve winner names by place finish
   // place 1 = champion, place 2 = finalist losers, place 3 = semi-final losers
@@ -634,6 +640,43 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
           </g>
         );
       })()}
+
+      {/* Bottom prize boxes — 3rd place and beyond, original size */}
+      {botPrizes.map((prize, i) => {
+        const boxH = botBoxH;
+        const rowH = boxH / 2;
+        const py = botBlockTop + i * (boxH + botGap);
+        const winnerName = winnerByPlace[prize.place];
+        return (
+          <g key={`bot-${prize.place}`}>
+            <rect x={boxX} y={py} width={boxW} height={boxH}
+              fill="none" stroke="#334155" strokeWidth="1" rx="3" />
+            <line x1={boxX} y1={py + rowH} x2={boxX + boxW} y2={py + rowH}
+              stroke="#334155" strokeWidth="0.5" />
+            <text x={boxX + 12} y={py + rowH / 2}
+              dominantBaseline="middle"
+              fontSize="10" fontWeight="700" letterSpacing="0.05em"
+              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+              fill="#94a3b8">
+              {prize.label}
+            </text>
+            <text x={boxX + boxW - 12} y={py + rowH / 2}
+              dominantBaseline="middle" textAnchor="end"
+              fontSize="13" fontWeight="800"
+              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+              fill={primaryColor}>
+              ${Number(prize.amount).toLocaleString()}
+            </text>
+            <text x={svgMid} y={py + rowH + rowH / 2}
+              dominantBaseline="middle" textAnchor="middle"
+              fontSize={winnerName ? "14" : "8"} fontWeight="800"
+              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+              fill={winnerName ? primaryColor : "#1e3a5f"}>
+              {winnerName || "awaiting result"}
+            </text>
+          </g>
+        );
+      })}
 
     </g>
   );

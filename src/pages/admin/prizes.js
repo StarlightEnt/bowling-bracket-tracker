@@ -136,7 +136,7 @@ export default function AdminPrizes() {
                     <input
                       value={form.label}
                       onChange={(e) => setForm({ ...form, label: e.target.value })}
-                      placeholder={prizes.length === 0 ? "1st Place" : prizes.length === 1 ? "2nd Place" : `${prizes.length + 1}th Place`}
+                      placeholder={(() => { const n = prizes.length + 1; const s = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"; return `${n}${s} Place`; })()}
                     />
                   </div>
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
