@@ -67,12 +67,19 @@ export default async function handler(req, res) {
       return { ...e, rawByGame, effectiveByGame };
     });
 
+    // Prizes for this bracket
+    const { rows: prizes } = await query(
+      "SELECT place, label, amount FROM bracket_prizes WHERE bracket_id = $1 ORDER BY place ASC",
+      [bracket_id]
+    );
+
     // Cache for 15 seconds (live display polls every 30s)
     res.setHeader("Cache-Control", "public, max-age=15");
     return res.status(200).json({
       bracket,
       entries: entriesWithScores,
       matchups,
+      prizes,
       updatedAt: new Date().toISOString(),
     });
   }
