@@ -613,7 +613,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   // Watermark labels — type left of logo, bracket number right
   const typeLabel = bracketType === "handicap" ? "Handicap" : "Scratch";
   const bracketNum = bracketName.replace(/\D/g, ""); // extract digits e.g. "HB1" -> "1"
-  const numLabel = `Bracket ${bracketNum}`;
+  const numLabel = `MegaBracket ${bracketNum}`;
   // Watermark X centers — between Gm4 right edge and logo edge on each side
   // Left clear zone: Gm4 right (688) to logo left (svgMid-75)
   // Right clear zone: logo right (svgMid+75) to Gm4 left (1232)
