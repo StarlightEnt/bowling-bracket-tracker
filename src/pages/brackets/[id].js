@@ -301,7 +301,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
       const winnerColor = "#f59e0b";
       const lostColor = "#2d3748";
       const pendingColor = "#cbd5e1";
-      const emptyBorder = "#1a2332";
+      const emptyBorder = "#3d5068";
       const filledBorder = status === "winner" ? winnerColor : status === "lost" ? "#2a313d" : "#2a3d52";
 
       // Cell background
@@ -318,7 +318,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
         els.push(<line key={`ostub-${game}-${hi}`}
           x1={outerStubX} y1={centerY}
           x2={isRight ? outerStubX + STUB_LEN : outerStubX - STUB_LEN} y2={centerY}
-          stroke={hasContent ? filledBorder : '#2a4060'} strokeWidth="1" />);
+          stroke={hasContent ? filledBorder : '#3d5068'} strokeWidth="1" />);
       }
 
       // INNER stub (toward center) — always draw, game 5 connects to finals
@@ -326,7 +326,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
         els.push(<line key={`istub-${game}-${hi}`}
           x1={innerStubX} y1={centerY}
           x2={isRight ? innerStubX - STUB_LEN : innerStubX + STUB_LEN} y2={centerY}
-          stroke={hasContent ? filledBorder : '#2a4060'} strokeWidth="1" />);
+          stroke={hasContent ? filledBorder : '#3d5068'} strokeWidth="1" />);
       }
 
       // Position number outside bracket (game 1 only)
