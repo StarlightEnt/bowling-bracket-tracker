@@ -194,7 +194,7 @@ export default function BracketPage() {
             <BracketHalf
               startPos={33} side="right"
               colsX={rightColsX}
-              posNumX={rightColsX + NUM_COLS * (COL_W + COL_GAP) - COL_GAP + POS_GAP + POS_W - 2}
+              posNumX={rightColsX + 4 * (COL_W + COL_GAP) + COL_W + POS_GAP}
               entryByPos={entryByPos}
               aliveAfter={aliveAfter}
               winnersOf={winnersOf}
@@ -333,7 +333,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
       if (game === 1) {
         els.push(<text key={`posn-${hi}`}
           x={posNumX} y={centerY}
-          textAnchor="end" dominantBaseline="central"
+          textAnchor={isRight ? "start" : "end"} dominantBaseline="central"
           fontSize="9" fill="#2d3748"
           fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="600">
           {pos || startPos + hi}
