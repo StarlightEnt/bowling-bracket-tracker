@@ -122,7 +122,19 @@ export default function AdminBowlers() {
 
       {/* Roster table */}
       <div className="card">
-        <div className="card-title">Roster ({bowlers.length} bowlers)</div>
+        <div className="card-title">Roster ({bowlers.length} bowlers)
+          <button
+            onClick={() => {
+              const rows = ["Bowler name,Average"];
+              for (const b of bowlers) rows.push(`${b.name},${b.avg}`);
+              const blob = new Blob([rows.join("\n")], { type: "text/csv" });
+              const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+              a.download = "bowler_roster.csv"; a.click();
+            }}
+            className="btn btn-secondary"
+            style={{ float: "right", fontSize: "0.75rem", padding: "0.25rem 0.75rem" }}
+          >⬇ Export CSV</button>
+        </div>
         {loading ? (
           <p style={{ color: "var(--color-text-muted)" }}>Loading...</p>
         ) : bowlers.length === 0 ? (
