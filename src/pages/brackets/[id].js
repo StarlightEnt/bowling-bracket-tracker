@@ -58,7 +58,7 @@ export default function BracketPage() {
   if (loading) return <Screen color="#94a3b8">Loading bracket...</Screen>;
   if (!data) return <Screen color="#ef4444">Bracket not found.</Screen>;
 
-  const { bracket, entries, matchups } = data;
+  const { bracket, entries, matchups, prizes = [] } = data;
   const isHdcp = bracket.bracket_type === "handicap";
   const primaryColor = settings.primary_color || "#f59e0b";
 
@@ -244,6 +244,7 @@ export default function BracketPage() {
               isHdcp={isHdcp}
               primaryColor={primaryColor}
               logoUrl={settings.tournament_logo_url}
+              prizes={prizes}
             />
           </svg>
         </div>
@@ -445,7 +446,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
   return <g>{els}</g>;
 }
 
-function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, svgMid, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl }) {
+function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, svgMid, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl, prizes = [] }) {
   // Finalist cell dimensions - same as rest of bracket
   const slotW = COL_W;
   const slotH = SLOT_H;
@@ -536,12 +537,77 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
 
   const midY = ROUND_LABEL_H + BRACKET_H / 2;
 
+  // Layout constants for center column
+  const logoSize = 150;
+  const logoTop = midY - logoSize / 2;    // 447
+  const logoBottom = midY + logoSize / 2; // 597
+  const topStart = ROUND_LABEL_H;
+  const boxW = CENTER_W - 16;
+  const boxX = svgMid - boxW / 2;
+
+  // Top 3 prizes displayed above logo
+  const topPrizes = prizes.slice(0, 3);
+  const prizeBoxH = 52;
+  const prizeGap = 10;
+  const prizeBlockH = topPrizes.length * (prizeBoxH + prizeGap) - prizeGap;
+  const prizeBlockTop = topStart + (logoTop - topStart - prizeBlockH) / 2;
+
+  // Resolve winner names by place finish
+  // place 1 = champion, place 2 = finalist losers, place 3 = semi-final losers
+  const winnerByPlace = {};
+  if (champion) winnerByPlace[1] = entryByPos[champion]?.bowler_name;
+  if (finalWinners.length > 0 && champion) {
+    const runnerUp = finalWinners.find(p => p !== champion);
+    if (runnerUp) winnerByPlace[2] = entryByPos[runnerUp]?.bowler_name;
+  }
+
   return (
     <g>
       {/* Left finalist cell with left stub */}
       {renderFinalistCell(leftPos, leftCellX, leftCenterY, "left")}
       {/* Right finalist cell with right stub */}
       {renderFinalistCell(rightPos, rightCellX, rightCenterY, "right")}
+
+      {/* Prize boxes — top whitespace, one box per place */}
+      {topPrizes.map((prize, i) => {
+        const boxH = 52;
+        const rowH = boxH / 2;
+        const py = prizeBlockTop + i * (boxH + prizeGap);
+        const winnerName = winnerByPlace[prize.place];
+        return (
+          <g key={prize.place}>
+            {/* Outer border */}
+            <rect x={boxX} y={py} width={boxW} height={boxH}
+              fill="none" stroke="#334155" strokeWidth="1" rx="3" />
+            {/* Divider between top and bottom row */}
+            <line x1={boxX} y1={py + rowH} x2={boxX + boxW} y2={py + rowH}
+              stroke="#334155" strokeWidth="0.5" />
+            {/* Top row: label left, amount right */}
+            <text x={boxX + 10} y={py + rowH / 2}
+              dominantBaseline="middle"
+              fontSize="10" fontWeight="700" letterSpacing="0.05em"
+              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+              fill="#94a3b8">
+              {prize.label}
+            </text>
+            <text x={boxX + boxW - 10} y={py + rowH / 2}
+              dominantBaseline="middle" textAnchor="end"
+              fontSize="13" fontWeight="800"
+              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+              fill={primaryColor}>
+              ${Number(prize.amount).toLocaleString()}
+            </text>
+            {/* Bottom row: winner name centered */}
+            <text x={svgMid} y={py + rowH + rowH / 2}
+              dominantBaseline="middle" textAnchor="middle"
+              fontSize={winnerName ? "14" : "8"} fontWeight="800"
+              fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+              fill={winnerName ? primaryColor : "#1e3a5f"}>
+              {winnerName || "awaiting result"}
+            </text>
+          </g>
+        );
+      })}
 
       {/* Tournament logo — dead center of window */}
       {logoUrl && (() => {
@@ -570,20 +636,6 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
         );
       })()}
 
-      {/* Champion name — below logo once known */}
-      {champion && (
-        <>
-          <text x={svgMid} y={midY + 85} textAnchor="middle"
-            fontSize="9" fill={primaryColor}
-            fontFamily="'Barlow Condensed',Arial Narrow,Arial"
-            fontWeight="800" letterSpacing="2">CHAMPION</text>
-          <text x={svgMid} y={midY + 100} textAnchor="middle"
-            fontSize="13" fill={primaryColor}
-            fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
-            {entryByPos[champion]?.bowler_name?.slice(0, 16)}
-          </text>
-        </>
-      )}
     </g>
   );
 }
