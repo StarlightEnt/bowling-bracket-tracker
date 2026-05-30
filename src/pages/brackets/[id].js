@@ -555,7 +555,8 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   // Bottom prizes — original size, start at Gm2 winner of slots 24-25
   const botBoxH = 52;
   const botGap = 8;
-  const botBlockTop = ROUND_LABEL_H + (24 + 0.5) * (BRACKET_H / 32) - SLOT_H / 2; // top of slot 25 box
+  // top of Gm2 winner cell for slots 25-26 = midpoint center - SLOT_H/2
+  const botBlockTop = ROUND_LABEL_H + ((24 + 0.5) + (25 + 0.5)) / 2 * (BRACKET_H / 32) - SLOT_H / 2;
 
   // Resolve winner names by place finish
   // place 1 = champion, place 2 = finalist losers, place 3 = semi-final losers
