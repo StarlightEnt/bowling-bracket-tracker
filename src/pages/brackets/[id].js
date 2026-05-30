@@ -245,6 +245,8 @@ export default function BracketPage() {
               primaryColor={primaryColor}
               logoUrl={settings.tournament_logo_url}
               prizes={prizes}
+              bracketName={bracket.name}
+              bracketType={bracket.bracket_type}
             />
           </svg>
         </div>
@@ -446,7 +448,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
   return <g>{els}</g>;
 }
 
-function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, svgMid, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl, prizes = [] }) {
+function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, svgMid, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl, prizes = [], bracketName = "", bracketType = "" }) {
   // Finalist cell dimensions - same as rest of bracket
   const slotW = COL_W;
   const slotH = SLOT_H;
@@ -569,12 +571,40 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     if (runnerUp) winnerByPlace[2] = entryByPos[runnerUp]?.bowler_name;
   }
 
+  // Watermark labels — type left of logo, bracket number right
+  const typeLabel = bracketType === "handicap" ? "Handicap" : "Scratch";
+  const bracketNum = bracketName.replace(/\D/g, ""); // extract digits e.g. "HB1" -> "1"
+  const numLabel = `Bracket ${bracketNum}`;
+  // X centers: left watermark centered between left bracket edge and logo left
+  // right watermark centered between logo right and right bracket edge
+  const logoLeft = svgMid - 75;
+  const logoRight = svgMid + 75;
+  const leftWaterX = logoLeft / 2;
+  const rightWaterX = logoRight + (DISPLAY_W - logoRight) / 2;
+  const waterY = midY;
+
   return (
     <g>
       {/* Left finalist cell with left stub */}
       {renderFinalistCell(leftPos, leftCellX, leftCenterY, "left")}
       {/* Right finalist cell with right stub */}
       {renderFinalistCell(rightPos, rightCellX, rightCenterY, "right")}
+
+      {/* Watermarks — type label left, bracket number right */}
+      <text x={leftWaterX} y={waterY} textAnchor="middle" dominantBaseline="middle"
+        fontSize="72" fontWeight="900"
+        fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+        fill="#ffffff" opacity="0.06" letterSpacing="2"
+        style={{ userSelect: "none" }}>
+        {typeLabel}
+      </text>
+      <text x={rightWaterX} y={waterY} textAnchor="middle" dominantBaseline="middle"
+        fontSize="72" fontWeight="900"
+        fontFamily="'Barlow Condensed',Arial Narrow,Arial"
+        fill="#ffffff" opacity="0.06" letterSpacing="2"
+        style={{ userSelect: "none" }}>
+        {numLabel}
+      </text>
 
       {/* Prize boxes — top whitespace, one box per place */}
       {topPrizes.map((prize, i) => {
