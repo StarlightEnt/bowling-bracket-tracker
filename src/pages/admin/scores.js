@@ -62,7 +62,7 @@ export default function AdminScores() {
       <h1 className="page-title">Import <span>Scores</span></h1>
       <p className="page-subtitle">Upload a game CSV to record scores and advance all active brackets</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "400px 1fr", gap: "1.5rem", alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "400px 1fr", gap: "1.5rem", alignItems: "stretch" }}>
         {/* Upload form */}
         <div className="card">
           <div className="card-title">📊 Upload Game CSV</div>
