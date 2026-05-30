@@ -118,7 +118,7 @@ export default function AdminDashboard() {
 function ActionCard({ href, icon, title, description, color }) {
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
-      <div className="card" style={{ cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", minHeight: "130px", display: "flex", flexDirection: "column", justifyContent: "center" }}
+      <div className="card" style={{ cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", height: "160px", display: "flex", flexDirection: "column", justifyContent: "center" }}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = color; e.currentTarget.style.transform = "translateY(-2px)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.transform = "none"; }}
       >
