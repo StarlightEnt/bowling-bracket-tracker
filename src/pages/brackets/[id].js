@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
+import Link from "next/link";
 import { useSettings } from "../../utils/useSettings.js";
 
 const ROUND_LABELS = ["Gm 1", "Gm 2", "Gm 3", "Gm 4", "Gm 5", "Gm 6"];
@@ -122,7 +123,19 @@ export default function BracketPage() {
           justifyContent: "space-between", padding: "0 1rem",
           background: "#111418", borderBottom: `2px solid ${settings.primary_color || "#f59e0b"}`,
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            <Link href="/brackets" style={{
+              display: "flex", alignItems: "center", gap: "0.3rem",
+              fontSize: "0.7rem", fontWeight: 700, letterSpacing: "0.08em",
+              textTransform: "uppercase", color: "#64748b", textDecoration: "none",
+              padding: "0.25rem 0.5rem", borderRadius: "3px",
+              border: "1px solid #1e293b", transition: "color 0.15s, border-color 0.15s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.color = "#94a3b8"; e.currentTarget.style.borderColor = "#334155"; }}
+              onMouseLeave={e => { e.currentTarget.style.color = "#64748b"; e.currentTarget.style.borderColor = "#1e293b"; }}
+            >
+              ◀ Brackets
+            </Link>
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
               {settings.tournament_logo_url ? (
                 <img src={settings.tournament_logo_url} alt="" style={{ height: 30, maxWidth: 120, objectFit: "contain" }} />
@@ -149,6 +162,7 @@ export default function BracketPage() {
                 LIVE
               </span>
             )}
+          </div>
           </div>
           <div style={{ fontSize: "0.65rem", color: "#475569" }}>
             {entries.length}/64 entries{lastUpdate ? `  ·  updated ${lastUpdate.toLocaleTimeString()}` : ""}
