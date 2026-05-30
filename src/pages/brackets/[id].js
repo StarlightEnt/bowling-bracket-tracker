@@ -324,7 +324,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
       // Cell background
       els.push(<rect key={`cell-${game}-${hi}`}
         x={cx} y={slotY} width={COL_W} height={SLOT_H}
-        fill={status === "winner" ? "rgba(245,158,11,0.1)" : hasContent ? "rgba(16,20,26,0.95)" : "rgba(10,14,20,0.5)"}
+        fill={status === "winner" ? `${primaryColor}1a` : hasContent ? "rgba(16,20,26,0.95)" : "rgba(10,14,20,0.5)"}
         stroke={hasContent ? filledBorder : emptyBorder}
         strokeWidth="0.75" rx="2" />);
 
@@ -387,7 +387,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
             els.push(<text key={`hdcp-${game}-${hi}`}
               x={cx + COL_W - 4} y={slotY + SLOT_H * 0.72}
               textAnchor="end" dominantBaseline="central"
-              fontSize="8" fill={status === "winner" ? "rgba(245,158,11,0.5)" : "#2d3748"}
+              fontSize="8" fill={status === "winner" ? `${primaryColor}80` : "#2d3748"}
               fontFamily="'Barlow Condensed',Arial Narrow,Arial">
               {score.raw}+{score.hdcp}
             </text>);
@@ -484,7 +484,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
     return (
       <g key={`final-${stubSide}`}>
         <rect x={cellX} y={cellY} width={slotW} height={slotH}
-          fill={isWinner ? "rgba(245,158,11,0.12)" : hasContent ? "rgba(16,20,26,0.95)" : "rgba(10,14,20,0.5)"}
+          fill={isWinner ? `${primaryColor}1f` : hasContent ? "rgba(16,20,26,0.95)" : "rgba(10,14,20,0.5)"}
           stroke={borderColor} strokeWidth={isWinner ? "1.5" : "0.75"} rx="2" />
         {/* Single stub connecting to Game 5 vertical line */}
         <line x1={stubX1} y1={centerY} x2={stubX2} y2={centerY}
