@@ -620,7 +620,7 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
   const leftGm4Right = POS_W + POS_GAP + 3 * (COL_W + COL_GAP) + COL_W;
   const rightGm4Left = HALF_W + CENTER_W + COL_GAP + 1 * (COL_W + COL_GAP);
   const leftWaterX = (leftGm4Right + (svgMid - 75)) / 2 - 60;
-  const rightWaterX = ((svgMid + 75) + rightGm4Left) / 2 + 60;
+  const rightWaterX = ((svgMid + 75) + rightGm4Left) / 2 + 90;
   const waterY = midY;
 
   return (
