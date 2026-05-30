@@ -77,7 +77,7 @@ export default function AdminPrizes() {
       <div style={{ display: "grid", gridTemplateColumns: "280px 1fr", gap: "1.5rem", alignItems: "start" }}>
         {/* Bracket selector */}
         <div className="card">
-          <div className="card-title">Select Bracket</div>
+          <div className="card-title">Select MegaBracket</div>
           <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
             {brackets.map((b) => (
               <button
@@ -136,7 +136,7 @@ export default function AdminPrizes() {
                     <input
                       value={form.label}
                       onChange={(e) => setForm({ ...form, label: e.target.value })}
-                      placeholder={(() => { const n = prizes.length + 1; const s = n === 1 ? "st" : n === 2 ? "nd" : n === 3 ? "rd" : "th"; return `${n}${s} Place`; })()}
+                      placeholder={prizes.length === 0 ? "1st Place" : prizes.length === 1 ? "2nd Place" : `${prizes.length + 1}th Place`}
                     />
                   </div>
                   <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>

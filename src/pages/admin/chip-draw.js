@@ -122,7 +122,7 @@ export default function AdminChipDraw() {
 
       {/* Step 1: Select bracket */}
       <div className="card">
-        <div className="card-title">Step 1 — Select Bracket</div>
+        <div className="card-title">Step 1 — Select MegaBracket</div>
         <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
           {brackets.map((b) => (
             <button
@@ -168,7 +168,7 @@ export default function AdminChipDraw() {
                   onClick={handleAutoDraw}
                   disabled={autoLoading || entries.length >= 64}
                 >
-                  {autoLoading ? "Assigning..." : entries.length >= 64 ? "Bracket Full" : "Auto-Fill All Slots"}
+                  {autoLoading ? "Assigning..." : entries.length >= 64 ? "MegaBracket Full" : "Auto-Fill All Slots"}
                 </button>
               </div>
             </div>

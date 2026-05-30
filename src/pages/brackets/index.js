@@ -30,7 +30,7 @@ export default function BracketsPage() {
     <Layout>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "2rem" }}>
         <div>
-          <h1 className="page-title">Live <span>Brackets</span></h1>
+          <h1 className="page-title">Live <span>MegaBrackets</span></h1>
           <p className="page-subtitle">Auto-refreshes every 30 seconds</p>
         </div>
         <div className="live-indicator">
@@ -78,7 +78,7 @@ export default function BracketsPage() {
       {scratch.length > 0 && (
         <section style={{ marginBottom: "2rem" }}>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-scratch)", marginBottom: "1rem" }}>
-            Scratch Brackets
+            Scratch MegaBrackets
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem" }}>
             {scratch.map((b) => <BracketCard key={b.id} bracket={b} />)}
@@ -89,7 +89,7 @@ export default function BracketsPage() {
       {handicap.length > 0 && (
         <section>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "1rem", letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--color-handicap)", marginBottom: "1rem" }}>
-            Handicap Brackets
+            Handicap MegaBrackets
           </h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: "1rem" }}>
             {handicap.map((b) => <BracketCard key={b.id} bracket={b} />)}

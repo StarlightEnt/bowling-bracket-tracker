@@ -24,7 +24,7 @@ export default function AdminDashboard() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
         {[
           { label: "Bowlers", value: bowlerCount, color: "var(--color-text)" },
-          { label: "Brackets", value: brackets.length, color: "var(--color-amber)" },
+          { label: "MegaBrackets", value: brackets.length, color: "var(--color-amber)" },
           { label: "Active", value: activeBrackets, color: "var(--color-handicap)" },
           { label: "Total Entries", value: totalEntries, color: "var(--color-scratch)" },
         ].map(({ label, value, color }) => (
@@ -47,8 +47,8 @@ export default function AdminDashboard() {
         <ActionCard
           href="/admin/brackets"
           icon="🏆"
-          title="Brackets"
-          description="Create and manage scratch and handicap brackets"
+          title="MegaBrackets"
+          description="Create and manage scratch and handicap MegaBrackets"
           color="var(--color-amber)"
         />
         <ActionCard
@@ -84,11 +84,11 @@ export default function AdminDashboard() {
       {/* Brackets quick status */}
       {brackets.length > 0 && (
         <div className="card" style={{ marginTop: "2rem" }}>
-          <div className="card-title">Bracket Status</div>
+          <div className="card-title">MegaBracket Status</div>
           <table className="data-table">
             <thead>
               <tr>
-                <th>Bracket</th>
+                <th>MegaBracket</th>
                 <th>Type</th>
                 <th>Entries</th>
                 <th>Game</th>
@@ -118,7 +118,7 @@ export default function AdminDashboard() {
 function ActionCard({ href, icon, title, description, color }) {
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
-      <div className="card" style={{ cursor: "pointer", transition: "border-color 0.15s, transform 0.15s", height: "160px", display: "flex", flexDirection: "column", justifyContent: "center" }}
+      <div className="card" style={{ cursor: "pointer", transition: "border-color 0.15s, transform 0.15s" }}
         onMouseEnter={(e) => { e.currentTarget.style.borderColor = color; e.currentTarget.style.transform = "translateY(-2px)"; }}
         onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--color-border)"; e.currentTarget.style.transform = "none"; }}
       >

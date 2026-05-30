@@ -61,16 +61,16 @@ export default function AdminBrackets() {
 
   return (
     <Layout isAdmin>
-      <h1 className="page-title">Manage <span>Brackets</span></h1>
+      <h1 className="page-title">Manage <span>MegaBrackets</span></h1>
       <p className="page-subtitle">Create scratch (SB) and handicap (HB) brackets</p>
 
       <div style={{ display: "grid", gridTemplateColumns: "340px 1fr", gap: "1.5rem", alignItems: "start" }}>
         {/* Create form */}
         <div className="card">
-          <div className="card-title">➕ New Bracket</div>
+          <div className="card-title">➕ New MegaBracket</div>
           <form onSubmit={handleCreate}>
             <div className="form-group">
-              <label>Bracket Type</label>
+              <label>MegaBracket Type</label>
               <div style={{ display: "flex", gap: "0.5rem" }}>
                 {["scratch", "handicap"].map((t) => (
                   <button
@@ -86,7 +86,7 @@ export default function AdminBrackets() {
               </div>
             </div>
             <div className="form-group">
-              <label>Bracket Name</label>
+              <label>MegaBracket Name</label>
               <input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value.toUpperCase() })}
@@ -99,14 +99,14 @@ export default function AdminBrackets() {
             </div>
             {msg && <div className={`alert alert-${msg.type}`}>{msg.text}</div>}
             <button type="submit" className="btn btn-primary" style={{ width: "100%" }}>
-              Create Bracket
+              Create MegaBracket
             </button>
           </form>
         </div>
 
         {/* Brackets list */}
         <div className="card">
-          <div className="card-title">All Brackets ({brackets.length})</div>
+          <div className="card-title">All MegaBrackets ({brackets.length})</div>
           {brackets.length === 0 ? (
             <p style={{ color: "var(--color-text-muted)" }}>No brackets yet.</p>
           ) : (

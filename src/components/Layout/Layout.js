@@ -13,7 +13,7 @@ export default function Layout({ children, isAdmin = false }) {
 
   const primaryColor = settings.primary_color || "#f59e0b";
   const logoUrl = settings.tournament_logo_url;
-  const name = settings.tournament_name || "Bracket Tracker";
+  const name = settings.tournament_name || "MegaBracket Tracker";
 
   return (
     <div className="app-shell">
@@ -35,7 +35,7 @@ export default function Layout({ children, isAdmin = false }) {
             href="/brackets"
             className={router.pathname.startsWith("/brackets") ? "active" : ""}
           >
-            Live Brackets
+            Live MegaBrackets
           </Link>
           {isAdmin ? (
             <>

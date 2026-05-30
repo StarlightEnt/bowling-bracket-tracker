@@ -101,7 +101,7 @@ export default function AdminScores() {
 
             {activeBrackets.length === 0 && (
               <div className="alert alert-info" style={{ marginBottom: "1rem" }}>
-                No active brackets found. Activate brackets before importing scores.
+                No active MegaBrackets found. Activate brackets before importing scores.
               </div>
             )}
 
@@ -144,11 +144,11 @@ export default function AdminScores() {
 
         {/* Bracket status */}
         <div className="card">
-          <div className="card-title">Active Brackets</div>
+          <div className="card-title">Active MegaBrackets</div>
           {activeBrackets.length === 0 ? (
             <p style={{ color: "var(--color-text-muted)" }}>
-              No active brackets. Go to{" "}
-              <a href="/admin/brackets">Brackets</a> and activate at least one.
+              No active MegaBrackets. Go to{" "}
+              <a href="/admin/brackets">MegaBrackets</a> and activate at least one.
             </p>
           ) : (
             <>
@@ -159,7 +159,7 @@ export default function AdminScores() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Bracket</th>
+                    <th>MegaBracket</th>
                     <th>Type</th>
                     <th>Entries</th>
                     <th>Current Game</th>
