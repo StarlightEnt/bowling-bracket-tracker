@@ -560,16 +560,16 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
           fontFamily="'Barlow Condensed',Arial Narrow,Arial">awaiting finalists</text>
       )}
 
-      {/* Tournament logo watermark in lower center */}
+      {/* Tournament logo — centered below trophy, top aligned to midpoint between Q2 Gm5 and Gm4 */}
       {logoUrl && (
         <image
           href={logoUrl}
-          x={xCenter - 75}
-          y={midY + 45}
-          width={150}
-          height={150}
+          x={xCenter - 60}
+          y={864}
+          width={120}
+          height={120}
           preserveAspectRatio="xMidYMid meet"
-          opacity="0.85"
+          opacity="0.9"
         />
       )}
     </g>
