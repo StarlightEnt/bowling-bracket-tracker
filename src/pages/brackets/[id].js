@@ -554,6 +554,8 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
 
   // Bottom prizes — original size, start at Gm2 winner of slots 24-25
   const botBoxH = 52;
+  const botBoxW = CENTER_W - 16;  // original width, narrower than top boxes
+  const botBoxX = svgMid - botBoxW / 2;
   const botGap = 8;
   // top of Gm2 winner cell for slots 25-26 = midpoint center - SLOT_H/2
   const botBlockTop = ROUND_LABEL_H + ((24 + 0.5) + (25 + 0.5)) / 2 * (BRACKET_H / 32) - SLOT_H / 2;
@@ -650,18 +652,18 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
         const winnerName = winnerByPlace[prize.place];
         return (
           <g key={`bot-${prize.place}`}>
-            <rect x={boxX} y={py} width={boxW} height={boxH}
+            <rect x={botBoxX} y={py} width={botBoxW} height={boxH}
               fill="none" stroke="#334155" strokeWidth="1" rx="3" />
-            <line x1={boxX} y1={py + rowH} x2={boxX + boxW} y2={py + rowH}
+            <line x1={botBoxX} y1={py + rowH} x2={botBoxX + botBoxW} y2={py + rowH}
               stroke="#334155" strokeWidth="0.5" />
-            <text x={boxX + 12} y={py + rowH / 2}
+            <text x={botBoxX + 10} y={py + rowH / 2}
               dominantBaseline="middle"
               fontSize="10" fontWeight="700" letterSpacing="0.05em"
               fontFamily="'Barlow Condensed',Arial Narrow,Arial"
               fill="#94a3b8">
               {prize.label}
             </text>
-            <text x={boxX + boxW - 12} y={py + rowH / 2}
+            <text x={botBoxX + botBoxW - 10} y={py + rowH / 2}
               dominantBaseline="middle" textAnchor="end"
               fontSize="13" fontWeight="800"
               fontFamily="'Barlow Condensed',Arial Narrow,Arial"
