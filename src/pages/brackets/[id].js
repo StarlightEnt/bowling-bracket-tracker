@@ -239,6 +239,7 @@ export default function BracketPage() {
               finalWinners={finalWinners}
               champion={champion}
               xCenter={HALF_W + CENTER_W / 2}
+              svgMid={svgW / 2}
               getScore={getScore}
               isHdcp={isHdcp}
               primaryColor={primaryColor}
@@ -444,7 +445,7 @@ function BracketHalf({ startPos, side, colsX, posNumX, entryByPos, aliveAfter, w
   return <g>{els}</g>;
 }
 
-function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl }) {
+function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champion, xCenter, svgMid, getScore, isHdcp, primaryColor = "#f59e0b", logoUrl }) {
   // Finalist cell dimensions - same as rest of bracket
   const slotW = COL_W;
   const slotH = SLOT_H;
@@ -542,11 +543,11 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       {/* Right finalist cell with right stub */}
       {renderFinalistCell(rightPos, rightCellX, rightCenterY, "right")}
 
-      {/* Tournament logo — absolute center of bracket */}
+      {/* Tournament logo — dead center of window */}
       {logoUrl && (() => {
         const logoSize = 150;
         const logoW = logoSize;
-        const lx = xCenter - logoW / 2;
+        const lx = svgMid - logoW / 2;
         const ly = midY - logoSize / 2;
         return (
           <g>
@@ -572,11 +573,11 @@ function Finals({ leftFinalists, rightFinalists, entryByPos, finalWinners, champ
       {/* Champion name — below logo once known */}
       {champion && (
         <>
-          <text x={xCenter} y={midY + 85} textAnchor="middle"
+          <text x={svgMid} y={midY + 85} textAnchor="middle"
             fontSize="9" fill={primaryColor}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial"
             fontWeight="800" letterSpacing="2">CHAMPION</text>
-          <text x={xCenter} y={midY + 100} textAnchor="middle"
+          <text x={svgMid} y={midY + 100} textAnchor="middle"
             fontSize="13" fill={primaryColor}
             fontFamily="'Barlow Condensed',Arial Narrow,Arial" fontWeight="800">
             {entryByPos[champion]?.bowler_name?.slice(0, 16)}
